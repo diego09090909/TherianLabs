@@ -48,7 +48,7 @@ class MainActivity : ComponentActivity() {
                         RegisterScreen(mainViewModel = viewModel)
                     }
                     composable(Screen.Lista.route) {
-                        ListScreen()
+                        ListScreen(mainViewModel = viewModel)
                     }
                 }
             }

@@ -117,6 +117,12 @@ fun RegisterScreen(
             ) {
                 Text("Ver registrados")
             }
+            OutlinedButton(
+                onClick = {mainViewModel.popBackStack()},
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Volver")
+            }
         }
     }
 }
