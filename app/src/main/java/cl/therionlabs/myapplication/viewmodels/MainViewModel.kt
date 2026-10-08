@@ -19,4 +19,10 @@ class MainViewModel : ViewModel() {
             _navigationEvents.emit(NavigationEvent.NavigateTo(screen))
         }
     }
+
+    fun popBackStack(){
+        CoroutineScope(Dispatchers.Main).launch{
+        _navigationEvents.emit(NavigationEvent.PopBackStack)
+        }
+    }
 }

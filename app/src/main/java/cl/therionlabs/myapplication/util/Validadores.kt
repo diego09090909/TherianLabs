@@ -16,10 +16,16 @@ object Validadores {
 
     // Formatea mientras se escribe: "123456785" -> "12345678-5"
     fun formatearRutEnVivo(texto: String): String {
-        val limpio = texto.filter { it.isDigit() || it == 'k' || it == 'K' }
-            .uppercase()
-            .take(9)
-        return if (limpio.length >= 8) limpio.dropLast(1) + "-" + limpio.last() else limpio
+        val t = texto.uppercase().filter { it.isDigit() || it == 'K' || it == '-'}
+
+        if(t.contains('-')){
+            val cuerpo = t.substringBefore('-').filter { it.isDigit() }.take(8)
+            val dv = t.substringAfter('-').filter { it.isDigit() || it == 'K' }.take(1)
+            return if (cuerpo.isEmpty())"" else "$cuerpo-$dv"
+        }
+
+        val limpio = t.take(9)
+        return if (limpio.length == 9) limpio.dropLast(1) + "-" + limpio.last() else limpio
     }
 
     // Valida formato y digito verificador (modulo 11)

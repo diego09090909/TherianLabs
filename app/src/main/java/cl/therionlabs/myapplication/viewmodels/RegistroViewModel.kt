@@ -57,11 +57,12 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
     // RF-03: el RUT se autoformatea y se valida en tiempo real mientras se escribe
     fun onRutChange(valor: String) {
         val formateado = Validadores.formatearRutEnVivo(valor)
+        val completo = formateado.substringAfter('-',"").length == 1
         _estado.update {
             it.copy(
                 rut = formateado,
                 errores = it.errores.copy(
-                    rut = if (formateado.length >= 8 && !Validadores.rutValido(formateado)) "RUT inválido" else null
+                    rut = if (completo && !Validadores.rutValido(formateado)) "RUT invalido" else null
                 )
             )
         }
