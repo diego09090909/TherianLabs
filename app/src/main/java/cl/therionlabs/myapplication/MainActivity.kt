@@ -11,6 +11,7 @@ import androidx.navigation.compose.rememberNavController
 import cl.therionlabs.myapplication.navigation.NavigationEvent
 import cl.therionlabs.myapplication.navigation.Screen
 import cl.therionlabs.myapplication.ui.HomeScreen
+import cl.therionlabs.myapplication.ui.ListScreen
 import cl.therionlabs.myapplication.ui.RegisterScreen
 import cl.therionlabs.myapplication.ui.theme.MyApplicationTheme
 import cl.therionlabs.myapplication.viewmodels.MainViewModel
@@ -44,7 +45,10 @@ class MainActivity : ComponentActivity() {
                         HomeScreen(viewModel = viewModel)
                     }
                     composable(Screen.Register.route) {
-                        RegisterScreen()
+                        RegisterScreen(mainViewModel = viewModel)
+                    }
+                    composable(Screen.Lista.route) {
+                        ListScreen()
                     }
                 }
             }
