@@ -22,6 +22,10 @@ import cl.therionlabs.myapplication.navigation.Screen
 import cl.therionlabs.myapplication.ui.theme.Blanco
 import cl.therionlabs.myapplication.ui.theme.MyApplicationTheme
 import cl.therionlabs.myapplication.viewmodels.MainViewModel
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.Color
 
 @Composable
 fun HomeScreen(viewModel: MainViewModel) { // <- Aquí se agrega el parámetro viewModel
@@ -54,6 +58,21 @@ fun HomeScreen(viewModel: MainViewModel) { // <- Aquí se agrega el parámetro v
             ) {
                 Text("Registrarse")
             }
+
+            Button(
+                onClick = {
+                    viewModel.navigateTo(Screen.RegistroCaptador)
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF17365D),
+                    contentColor = Color(0xFFFFC900)
+                )
+            ) {
+                Text(
+                    text = "Registrarse como captador"
+                )
+            }
+
 
             Spacer(modifier = Modifier.weight(1f))
 

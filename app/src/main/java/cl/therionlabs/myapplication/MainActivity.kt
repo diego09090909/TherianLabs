@@ -16,6 +16,7 @@ import cl.therionlabs.myapplication.ui.RegisterScreen
 import cl.therionlabs.myapplication.ui.theme.MyApplicationTheme
 import cl.therionlabs.myapplication.viewmodels.MainViewModel
 import kotlinx.coroutines.flow.collectLatest
+import cl.therionlabs.myapplication.ui.RegistroCaptadorScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,6 +50,13 @@ class MainActivity : ComponentActivity() {
                     }
                     composable(Screen.Lista.route) {
                         ListScreen(mainViewModel = viewModel)
+                    }
+                    composable("registro_captador") {
+                        RegistroCaptadorScreen(
+                            onVolverLogin = {
+                                navController.popBackStack()
+                            }
+                        )
                     }
                 }
             }
