@@ -12,11 +12,12 @@ import cl.therionlabs.myapplication.navigation.NavigationEvent
 import cl.therionlabs.myapplication.navigation.Screen
 import cl.therionlabs.myapplication.ui.HomeScreen
 import cl.therionlabs.myapplication.ui.ListScreen
+import cl.therionlabs.myapplication.ui.LoginScreen
 import cl.therionlabs.myapplication.ui.RegisterScreen
+import cl.therionlabs.myapplication.ui.RegistroCaptadorScreen
 import cl.therionlabs.myapplication.ui.theme.MyApplicationTheme
 import cl.therionlabs.myapplication.viewmodels.MainViewModel
 import kotlinx.coroutines.flow.collectLatest
-import cl.therionlabs.myapplication.ui.RegistroCaptadorScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,21 +43,43 @@ class MainActivity : ComponentActivity() {
                     navController = navController,
                     startDestination = Screen.Home.route
                 ) {
+
                     composable(Screen.Home.route) {
                         HomeScreen(viewModel = viewModel)
                     }
-                    composable(Screen.Register.route) {
-                        RegisterScreen(mainViewModel = viewModel)
+
+
+                    composable(Screen.Login.route) {
+                        LoginScreen(
+                            onLoginSuccess = {
+
+                                navController.navigate(Screen.Lista.route) {
+                                    popUpTo(Screen.Home.route) { inclusive = true }
+                                }
+                            },
+                            onNavigateToRegister = {
+                                navController.navigate("registro_captador")
+                            }
+                        )
                     }
-                    composable(Screen.Lista.route) {
-                        ListScreen(mainViewModel = viewModel)
-                    }
+
+
                     composable("registro_captador") {
                         RegistroCaptadorScreen(
                             onVolverLogin = {
                                 navController.popBackStack()
                             }
                         )
+                    }
+
+
+                    composable(Screen.Register.route) {
+                        RegisterScreen(mainViewModel = viewModel)
+                    }
+
+
+                    composable(Screen.Lista.route) {
+                        ListScreen(mainViewModel = viewModel)
                     }
                 }
             }

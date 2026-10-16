@@ -47,7 +47,7 @@ fun HomeScreen(viewModel: MainViewModel) { // <- Aquí se agrega el parámetro v
             LogoApp()
 
             Button(
-                onClick = {}
+                onClick = { viewModel.navigateTo(Screen.Login)}
             ) {
                 Text("Iniciar Sesión")
             }
