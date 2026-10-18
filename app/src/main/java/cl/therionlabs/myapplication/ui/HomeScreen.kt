@@ -8,10 +8,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -22,13 +24,9 @@ import cl.therionlabs.myapplication.navigation.Screen
 import cl.therionlabs.myapplication.ui.theme.Blanco
 import cl.therionlabs.myapplication.ui.theme.MyApplicationTheme
 import cl.therionlabs.myapplication.viewmodels.MainViewModel
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Text
-import androidx.compose.ui.graphics.Color
 
 @Composable
-fun HomeScreen(viewModel: MainViewModel) { // <- Aquí se agrega el parámetro viewModel
+fun HomeScreen(viewModel: MainViewModel) {
     Box {
         Image(
             painter = painterResource(R.drawable.images),
@@ -47,32 +45,20 @@ fun HomeScreen(viewModel: MainViewModel) { // <- Aquí se agrega el parámetro v
             LogoApp()
 
             Button(
-                onClick = { viewModel.navigateTo(Screen.Login)}
+                onClick = { viewModel.navigateTo(Screen.Login) }
             ) {
                 Text("Iniciar Sesión")
             }
 
-            // Al hacer clic, le avisa al ViewModel que navegue a Register
             Button(
-                onClick = { viewModel.navigateTo(Screen.Register) }
-            ) {
-                Text("Registrarse")
-            }
-
-            Button(
-                onClick = {
-                    viewModel.navigateTo(Screen.RegistroCaptador)
-                },
+                onClick = { viewModel.navigateTo(Screen.RegistroCaptador) },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF17365D),
                     contentColor = Color(0xFFFFC900)
                 )
             ) {
-                Text(
-                    text = "Registrarse como captador"
-                )
+                Text(text = "Registrar captador")
             }
-
 
             Spacer(modifier = Modifier.weight(1f))
 

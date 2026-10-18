@@ -23,7 +23,6 @@ import cl.therionlabs.myapplication.data.Estado
 import cl.therionlabs.myapplication.viewmodels.MainViewModel
 import cl.therionlabs.myapplication.viewmodels.RegistroViewModel
 
-// RF-04: el captador solo ve Nombre y RUT. Correo y teléfono nunca se muestran aquí.
 @Composable
 fun ListScreen(mainViewModel: MainViewModel, viewModel: RegistroViewModel = viewModel()) {
     val lista by viewModel.prospectos.collectAsState()

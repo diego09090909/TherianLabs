@@ -27,9 +27,15 @@ data class RegistroErrores(
     val aceptaTerminos: String? = null
 )
 
-// Opciones de los desplegables (luego se pueden reemplazar por el catalogo oficial de cursos)
 object Catalogos {
-    val niveles = listOf("Enseñanza Media", "Técnico", "Universitario", "Otro")
-    val carreras = listOf("Informática", "Construcción", "Administración", "Salud", "Electricidad")
+    val niveles = listOf("1° medio", "2° medio", "3° medio", "4° medio", "Egresado")
+    val carreras = listOf(
+        "Analista Programador",
+        "Informática",
+        "Construcción",
+        "Administración",
+        "Salud",
+        "Electricidad"
+    )
     val modalidades = listOf("Online", "Presencial")
 }

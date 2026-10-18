@@ -7,6 +7,7 @@ import cl.therionlabs.myapplication.CapturaApp
 import cl.therionlabs.myapplication.data.CryptoManager
 import cl.therionlabs.myapplication.data.Prospecto
 import cl.therionlabs.myapplication.model.RegistroErrores
+import cl.therionlabs.myapplication.model.ResumenProspecto
 import cl.therionlabs.myapplication.model.RegistroUiState
 import cl.therionlabs.myapplication.util.Validadores
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -20,21 +21,24 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+private const val MSG_RUT_INVALIDO = "El RUT no es válido. Revisa el dígito verificador."
+private const val MSG_CORREO_INVALIDO = "Ingresa un correo válido, por ejemplo nombre@correo.cl."
+
 class RegistroViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repo = (application as CapturaApp).repository
 
-    // Canal privado de actualización
     private val _estado = MutableStateFlow(RegistroUiState())
 
     // Canal público de solo lectura para la vista
     val estado: StateFlow<RegistroUiState> = _estado.asStateFlow()
 
-    // Mensajes de una sola vez para la vista (Snackbar)
     private val _mensajes = MutableSharedFlow<String>()
     val mensajes: SharedFlow<String> = _mensajes.asSharedFlow()
 
-    // Lista local para la pantalla de registrados (RF-04: la vista solo muestra nombre y RUT)
+    private val _guardados = MutableSharedFlow<ResumenProspecto>()
+    val guardados: SharedFlow<ResumenProspecto> = _guardados.asSharedFlow()
+
     val prospectos = repo.observarTodos()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -54,7 +58,6 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    // RF-03: el RUT se autoformatea y se valida en tiempo real mientras se escribe
     fun onRutChange(valor: String) {
         val formateado = Validadores.formatearRutEnVivo(valor)
         val completo = formateado.substringAfter('-',"").length == 1
@@ -62,7 +65,7 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
             it.copy(
                 rut = formateado,
                 errores = it.errores.copy(
-                    rut = if (completo && !Validadores.rutValido(formateado)) "RUT invalido" else null
+                    rut = if (completo && !Validadores.rutValido(formateado)) MSG_RUT_INVALIDO else null
                 )
             )
         }
@@ -73,7 +76,7 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
             it.copy(
                 correo = valor,
                 errores = it.errores.copy(
-                    correo = if (valor.isNotBlank() && !Validadores.correoValido(valor)) "Correo inválido" else null
+                    correo = if (valor.isNotBlank() && !Validadores.correoValido(valor)) MSG_CORREO_INVALIDO else null
                 )
             )
         }
@@ -120,12 +123,12 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
             nombre = if (actual.nombre.isBlank()) "El nombre es obligatorio" else null,
             rut = when {
                 actual.rut.isBlank() -> "El RUT es obligatorio"
-                !Validadores.rutValido(actual.rut) -> "RUT inválido"
+                !Validadores.rutValido(actual.rut) -> MSG_RUT_INVALIDO
                 else -> null
             },
             correo = when {
                 actual.correo.isBlank() -> "El correo es obligatorio"
-                !Validadores.correoValido(actual.correo) -> "Correo inválido"
+                !Validadores.correoValido(actual.correo) -> MSG_CORREO_INVALIDO
                 else -> null
             },
             telefono = when {
@@ -134,19 +137,18 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
                 else -> null
             },
             colegio = if (actual.colegio.isBlank()) "El colegio es obligatorio" else null,
-            nivel = if (actual.nivel.isBlank()) "Selecciona un nivel" else null,
+            nivel = if (actual.nivel.isBlank()) "Selecciona un curso" else null,
             carrera = if (actual.carrera.isBlank()) "Selecciona una carrera" else null,
-            modalidad = if (actual.modalidad.isBlank()) "Selecciona una modalidad" else null,
-            aceptaTerminos = if (!actual.aceptaTerminos) "Debes aceptar los términos" else null
+            // La modalidad ya no está en el formulario del boceto, por eso no se valida
+            aceptaTerminos = if (!actual.aceptaTerminos) "Debes marcar la autorización del alumno" else null
         )
 
         _estado.update { it.copy(errores = errores) }
         return errores.nombre == null && errores.rut == null && errores.correo == null &&
                 errores.telefono == null && errores.colegio == null && errores.nivel == null &&
-                errores.carrera == null && errores.modalidad == null && errores.aceptaTerminos == null
+                errores.carrera == null && errores.aceptaTerminos == null
     }
 
-    // Guarda SIEMPRE en Room primero. La subida a la API la hace WorkManager cuando hay red.
     fun guardar() {
         if (!validar()) return
 
@@ -168,7 +170,15 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
             if (repo.guardar(prospecto)) {
                 // Limpia el formulario pero mantiene evento y colegio para el siguiente prospecto
                 _estado.value = RegistroUiState(eventoId = f.eventoId, colegio = f.colegio)
-                _mensajes.emit("Prospecto guardado")
+                _guardados.emit(
+                    ResumenProspecto(
+                        nombre = f.nombre.trim(),
+                        curso = f.nivel,
+                        carrera = f.carrera,
+                        eventoId = f.eventoId.trim(),
+                        liceo = f.colegio.trim()
+                    )
+                )
             } else {
                 _mensajes.emit("Ese RUT ya fue registrado en este evento")
             }

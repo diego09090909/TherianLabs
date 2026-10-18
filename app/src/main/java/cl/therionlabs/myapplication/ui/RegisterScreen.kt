@@ -1,41 +1,42 @@
-
 package cl.therionlabs.myapplication.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Checkbox
-import androidx.compose.ui.Alignment
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.therionlabs.myapplication.model.Catalogos
+import cl.therionlabs.myapplication.model.EventoQr
 import cl.therionlabs.myapplication.navigation.Screen
 import cl.therionlabs.myapplication.viewmodels.MainViewModel
 import cl.therionlabs.myapplication.viewmodels.RegistroViewModel
@@ -46,142 +47,182 @@ fun RegisterScreen(
     viewModel: RegistroViewModel = viewModel()
 ) {
     val estado by viewModel.estado.collectAsState()
-    val pendientes by viewModel.pendientes.collectAsState()
+    val evento by mainViewModel.evento.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Muestra los mensajes que emite el ViewModel (guardado OK, RUT duplicado)
+    LaunchedEffect(evento) {
+        evento?.let {
+            viewModel.onEventoChange(it.id)
+            viewModel.onColegioChange(it.liceo)
+        }
+    }
+
     LaunchedEffect(Unit) {
         viewModel.mensajes.collect { snackbarHostState.showSnackbar(it) }
     }
 
-    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
+    // Alumno guardado: se abre la pantalla "Prospecto guardado en el dispositivo"
+    LaunchedEffect(Unit) {
+        viewModel.guardados.collect { resumen ->
+            mainViewModel.registrarGuardado(resumen)
+            mainViewModel.navigateTo(Screen.Guardado)
+        }
+    }
+
+    val e = estado.errores
+    val cantidadErrores = listOfNotNull(
+        e.nombre, e.rut, e.correo, e.telefono, e.nivel, e.carrera, e.aceptaTerminos
+    ).size
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = { DuocTopBar("Nuevo prospecto") { mainViewModel.popBackStack() } },
+        containerColor = DuocFondo
+    ) { padding ->
         Column(
             modifier = Modifier
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text("Nuevo prospecto", style = MaterialTheme.typography.headlineSmall)
-            Text("Pendientes de sincronizar: $pendientes")
-
-            Campo("Evento / Colegio (ID)", estado.eventoId, null) { viewModel.onEventoChange(it) }
-            Campo("Nombre completo", estado.nombre, estado.errores.nombre) { viewModel.onNombreChange(it) }
-            Campo("RUT (12345678-5)", estado.rut, estado.errores.rut) { viewModel.onRutChange(it) }
-            Campo("Correo electrónico", estado.correo, estado.errores.correo, KeyboardType.Email) {
-                viewModel.onCorreoChange(it)
-            }
-            Campo("Teléfono (9XXXXXXXX)", estado.telefono, estado.errores.telefono, KeyboardType.Phone) {
-                viewModel.onTelefonoChange(it)
-            }
-            Campo("Colegio de origen", estado.colegio, estado.errores.colegio) { viewModel.onColegioChange(it) }
-
-            Desplegable("Nivel educativo", estado.nivel, Catalogos.niveles, estado.errores.nivel) {
-                viewModel.onNivelChange(it)
-            }
-            Desplegable("Carrera / Área de interés", estado.carrera, Catalogos.carreras, estado.errores.carrera) {
-                viewModel.onCarreraChange(it)
+            // Con errores se muestra el aviso rojo; sin errores, la tarjeta del evento
+            if (cantidadErrores > 0) {
+                BannerErrores(cantidadErrores)
+            } else {
+                evento?.let { TarjetaEvento(it) }
             }
 
-            Text("Modalidad", style = MaterialTheme.typography.labelLarge)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Catalogos.modalidades.forEach { m ->
-                    FilterChip(
-                        selected = estado.modalidad == m,
-                        onClick = { viewModel.onModalidadChange(m) },
-                        label = { Text(m) }
-                    )
-                }
-            }
-            estado.errores.modalidad?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            DuocField(
+                etiqueta = "Nombre completo del alumno",
+                valor = estado.nombre,
+                onCambio = viewModel::onNombreChange,
+                placeholder = "Nombre y apellidos",
+                error = e.nombre
+            )
+            DuocField(
+                etiqueta = "RUT",
+                valor = estado.rut,
+                onCambio = viewModel::onRutChange,
+                placeholder = "12.345.678-9",
+                error = e.rut
+            )
+            DuocField(
+                etiqueta = "Correo",
+                valor = estado.correo,
+                onCambio = viewModel::onCorreoChange,
+                placeholder = "nombre@correo.cl",
+                error = e.correo,
+                teclado = KeyboardType.Email
+            )
+            DuocField(
+                etiqueta = "Teléfono",
+                valor = estado.telefono,
+                onCambio = viewModel::onTelefonoChange,
+                placeholder = "9XXXXXXXX",
+                error = e.telefono,
+                teclado = KeyboardType.Phone
+            )
 
-            Campo("Observaciones (opcional)", estado.observaciones, null) {
-                viewModel.onObservacionesChange(it)
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                DuocDropdown(
+                    etiqueta = "Curso",
+                    seleccionado = estado.nivel,
+                    opciones = Catalogos.niveles,
+                    error = e.nivel,
+                    onSeleccion = viewModel::onNivelChange,
+                    modifier = Modifier.weight(1f)
+                )
+                DuocDropdown(
+                    etiqueta = "Carrera de interés",
+                    seleccionado = estado.carrera,
+                    opciones = Catalogos.carreras,
+                    error = e.carrera,
+                    onSeleccion = viewModel::onCarreraChange,
+                    modifier = Modifier.weight(1f)
+                )
             }
 
-            // Casilla de términos: consentimiento para tratar los datos personales
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(
                     checked = estado.aceptaTerminos,
-                    onCheckedChange = viewModel::onAceptarTerminosChange
+                    onCheckedChange = viewModel::onAceptarTerminosChange,
+                    colors = CheckboxDefaults.colors(checkedColor = DuocNavy)
                 )
-                Text("Acepto el tratamiento de mis datos personales")
+                Text(
+                    text = "El alumno autoriza que Duoc UC lo contacte.",
+                    color = DuocNavy,
+                    fontSize = 15.sp
+                )
             }
-            estado.errores.aceptaTerminos?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            e.aceptaTerminos?.let {
+                Text(it, color = DuocError, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            }
 
-            Button(onClick = { viewModel.guardar() }, modifier = Modifier.fillMaxWidth()) {
-                Text("Guardar")
-            }
-            OutlinedButton(
+            DuocBotonAmarillo(
+                texto = if (cantidadErrores > 0) "Corregir y guardar" else "Validar y guardar",
+                onClick = { viewModel.guardar() }
+            )
+
+            TextButton(
                 onClick = { mainViewModel.navigateTo(Screen.Lista) },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Ver registrados")
-            }
-            OutlinedButton(
-                onClick = {mainViewModel.popBackStack()},
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Volver")
+                Text("Ver registrados", color = DuocGris)
             }
         }
     }
 }
 
 @Composable
-private fun Campo(
-    etiqueta: String,
-    valor: String,
-    error: String?,
-    teclado: KeyboardType = KeyboardType.Text,
-    onCambio: (String) -> Unit
-) {
-    OutlinedTextField(
-        value = valor,
-        onValueChange = onCambio,
-        label = { Text(etiqueta) },
-        isError = error != null,
-        supportingText = { error?.let { Text(it) } },
-        keyboardOptions = KeyboardOptions(keyboardType = teclado),
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth()
-    )
+private fun BannerErrores(cantidad: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFFFDE7E7))
+            .border(1.dp, Color(0xFFF2B8B8), RoundedCornerShape(16.dp))
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Icon(Icons.Default.Warning, contentDescription = null, tint = DuocError)
+        Text(
+            text = if (cantidad == 1) {
+                "Corrige 1 campo para poder guardar al alumno."
+            } else {
+                "Corrige $cantidad campos para poder guardar al alumno."
+            },
+            color = Color(0xFF8E1B1B),
+            fontWeight = FontWeight.SemiBold
+        )
+    }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun Desplegable(
-    etiqueta: String,
-    seleccionado: String,
-    opciones: List<String>,
-    error: String?,
-    onSeleccion: (String) -> Unit
-) {
-    var abierto by remember { mutableStateOf(false) }
-
-    ExposedDropdownMenuBox(expanded = abierto, onExpandedChange = { abierto = it }) {
-        OutlinedTextField(
-            value = seleccionado,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(etiqueta) },
-            isError = error != null,
-            supportingText = { error?.let { Text(it) } },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = abierto) },
-            modifier = Modifier
-                .menuAnchor()
-                .fillMaxWidth()
-        )
-        ExposedDropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
-            opciones.forEach { op ->
-                DropdownMenuItem(
-                    text = { Text(op) },
-                    onClick = {
-                        onSeleccion(op)
-                        abierto = false
-                    }
-                )
-            }
+private fun TarjetaEvento(evento: EventoQr) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFFE1E9F7))
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(evento.liceo, color = DuocNavy, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(evento.nombre, color = DuocGris, fontSize = 14.sp)
         }
+        Text(
+            text = evento.id,
+            color = DuocNavy,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .clip(RoundedCornerShape(50))
+                .background(Color.White)
+                .padding(horizontal = 14.dp, vertical = 8.dp)
+        )
     }
 }
