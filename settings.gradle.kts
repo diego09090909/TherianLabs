@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "CaptacionDuoc"
+rootProject.name = "CaptadorDuoc"
 include(":app")
