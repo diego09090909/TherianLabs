@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -86,7 +87,6 @@ fun RegisterScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Con errores se muestra el aviso rojo; sin errores, la tarjeta del evento
             if (cantidadErrores > 0) {
                 BannerErrores(cantidadErrores)
             } else {
@@ -121,7 +121,8 @@ fun RegisterScreen(
                 onCambio = viewModel::onTelefonoChange,
                 placeholder = "9XXXXXXXX",
                 error = e.telefono,
-                teclado = KeyboardType.Phone
+                teclado = KeyboardType.Phone,
+                imeAction = ImeAction.Done
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -180,8 +181,8 @@ private fun BannerErrores(cantidad: Int) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFFFDE7E7))
-            .border(1.dp, Color(0xFFF2B8B8), RoundedCornerShape(16.dp))
+            .background(DuocErrorFondo)
+            .border(1.dp, DuocErrorBorde, RoundedCornerShape(16.dp))
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -193,7 +194,7 @@ private fun BannerErrores(cantidad: Int) {
             } else {
                 "Corrige $cantidad campos para poder guardar al alumno."
             },
-            color = Color(0xFF8E1B1B),
+            color = DuocErrorTexto,
             fontWeight = FontWeight.SemiBold
         )
     }
@@ -205,7 +206,7 @@ private fun TarjetaEvento(evento: EventoQr) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFFE1E9F7))
+            .background(DuocAzulSuave)
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween

@@ -1,23 +1,29 @@
 package cl.therionlabs.myapplication.ui
 
-import androidx.compose.foundation.gestures.scrollable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.therionlabs.myapplication.data.Estado
 import cl.therionlabs.myapplication.viewmodels.MainViewModel
@@ -28,47 +34,116 @@ fun ListScreen(mainViewModel: MainViewModel, viewModel: RegistroViewModel = view
     val lista by viewModel.prospectos.collectAsState()
     val pendientes by viewModel.pendientes.collectAsState()
 
-    Scaffold { padding ->
-    Column(modifier = Modifier.padding(padding).padding(16.dp)) {
-        Text("Registrados: ${lista.size}", style = MaterialTheme.typography.headlineSmall)
-        Text("Pendientes de sincronizar: $pendientes")
-
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+    Scaffold(
+        topBar = { DuocTopBar("Prospectos y sincronización") { mainViewModel.popBackStack() } },
+        containerColor = DuocFondo
+    ) { padding ->
+        Column(
             modifier = Modifier
-                .weight(1f)
-                .padding(top = 12.dp)
+                .padding(padding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(lista, key = { it.id }) { p ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text(p.nombreCompleto, style = MaterialTheme.typography.titleMedium)
-                            Text(p.rut)
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                TarjetaResumen(
+                    numero = lista.size,
+                    etiqueta = "Prospectos guardados",
+                    colorNumero = DuocNavy,
+                    modifier = Modifier.weight(1f)
+                )
+                TarjetaResumen(
+                    numero = pendientes,
+                    etiqueta = "Pendientes de sincronizar",
+                    colorNumero = if (pendientes > 0) DuocAmarilloTexto else DuocVerde,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Text(
+                text = "Registrados",
+                color = DuocNavy,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            if (lista.isEmpty()) {
+                Text(
+                    text = "Aún no has registrado alumnos.",
+                    color = DuocGris,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color.White)
+                        .border(1.dp, DuocBorde.copy(alpha = 0.6f), RoundedCornerShape(20.dp))
+                ) {
+                    itemsIndexed(lista, key = { _, p -> p.id }) { indice, p ->
+                        if (indice > 0) HorizontalDivider(color = DuocBorde.copy(alpha = 0.6f))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = p.nombreCompleto,
+                                    color = DuocNavy,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = "${p.rut} · ${p.eventoId}",
+                                    color = DuocGris,
+                                    fontSize = 13.sp
+                                )
+                            }
+                            if (p.estado == Estado.SINCRONIZADO) {
+                                DuocPill("Sincronizado", DuocVerdeSuave, DuocVerde)
+                            } else {
+                                DuocPill("Pendiente", DuocAmarilloPill, DuocAmarilloTexto)
+                            }
                         }
-                        val sincronizado = p.estado == Estado.SINCRONIZADO
-                        Text(
-                            if (sincronizado) "Sincronizado" else "Pendiente",
-                            color = if (sincronizado) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.error
-                        )
                     }
                 }
             }
-        }
-        Button(
-            onClick = {mainViewModel.popBackStack()},
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp)
-        ) {
-            Text("Volver")
+
+            Text(
+                text = "Sin conexión, los datos se mantienen en el dispositivo y se suben solos al volver la red.",
+                color = DuocGris,
+                fontSize = 13.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
+}
+
+@Composable
+private fun TarjetaResumen(
+    numero: Int,
+    etiqueta: String,
+    colorNumero: Color,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White)
+            .border(1.dp, DuocBorde.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+            .padding(16.dp)
+    ) {
+        Text(
+            text = numero.toString(),
+            color = colorNumero,
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Text(text = etiqueta, color = DuocGris, fontSize = 13.sp)
     }
 }

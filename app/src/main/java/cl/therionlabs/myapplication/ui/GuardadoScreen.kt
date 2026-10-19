@@ -68,13 +68,13 @@ fun GuardadoScreen(mainViewModel: MainViewModel) {
                     modifier = Modifier
                         .size(96.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFFDDF3E4)),
+                        .background(DuocVerdeSuave),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = null,
-                        tint = Color(0xFF1E8449),
+                        tint = DuocVerde,
                         modifier = Modifier.size(48.dp)
                     )
                 }
@@ -137,20 +137,20 @@ fun GuardadoScreen(mainViewModel: MainViewModel) {
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(50))
-                                .background(Color(0xFFFFF0C2))
+                                .background(DuocAmarilloPill)
                                 .padding(horizontal = 12.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Schedule,
                                 contentDescription = null,
-                                tint = Color(0xFF7A5A00),
+                                tint = DuocAmarilloTexto,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 text = "Pendiente de sincronizar",
-                                color = Color(0xFF7A5A00),
+                                color = DuocAmarilloTexto,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -160,12 +160,13 @@ fun GuardadoScreen(mainViewModel: MainViewModel) {
             }
 
             Spacer(Modifier.height(12.dp))
+            // Vuelve al formulario, que ya quedó limpio con el mismo evento
             DuocBotonAmarillo(
                 texto = "Registrar otro alumno",
                 onClick = { mainViewModel.popBackStack() }
             )
             Spacer(Modifier.height(12.dp))
-            // Todavía no existe el panel del boceto por lo que ahora vuelve al escáner
+            // Todavía no existe el panel del boceto (pág. 4): por ahora vuelve al escáner
             DuocBotonContorno(
                 texto = "Volver al panel",
                 onClick = { mainViewModel.popTo(Screen.Scan) }

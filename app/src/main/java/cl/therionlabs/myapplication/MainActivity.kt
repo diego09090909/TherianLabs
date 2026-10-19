@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MyApplicationTheme {
+            MyApplicationTheme(darkTheme = false) {
                 val viewModel: MainViewModel = viewModel()
                 val navController = rememberNavController()
 
@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
                                 navController.navigate(event.screen.route)
 
                             is NavigationEvent.PopTo -> {
+
                                 if (!navController.popBackStack(event.screen.route, false)) {
                                     navController.navigate(event.screen.route)
                                 }
@@ -62,7 +63,7 @@ class MainActivity : ComponentActivity() {
 
                 NavHost(
                     navController = navController,
-                    startDestination = Screen.Scan.route   // temporal, antes: Screen.Home.route
+                    startDestination = Screen.Scan.route
                 ) {
 
                     composable(Screen.Home.route) {
@@ -76,6 +77,7 @@ class MainActivity : ComponentActivity() {
                             Box(modifier = Modifier.weight(1f)) {
                                 LoginScreen(
                                     onLoginSuccess = {
+                                        // Tras iniciar sesión se va a escanear el QR del evento
                                         navController.navigate(Screen.Scan.route) {
                                             popUpTo(Screen.Home.route) { inclusive = true }
                                         }
@@ -101,7 +103,6 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
-
 
                     composable(Screen.Scan.route) {
                         ScanQrScreen(mainViewModel = viewModel)

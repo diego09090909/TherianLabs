@@ -73,13 +73,13 @@ fun EventoDetectadoScreen(mainViewModel: MainViewModel) {
                         modifier = Modifier
                             .size(96.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFDDF3E4)),
+                            .background(DuocVerdeSuave),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = null,
-                            tint = Color(0xFF1E8449),
+                            tint = DuocVerde,
                             modifier = Modifier.size(48.dp)
                         )
                     }
