@@ -2,25 +2,32 @@ package cl.therionlabs.myapplication.ui
 
 import android.util.Patterns
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val AzulDuoc = Color(0xFF17365D)
-private val AmarilloDuoc = Color(0xFFFFC900)
-private val Fondo = Color(0xFFF7F8FA)
-
+// Solo cambia el aspecto (según el boceto). La lógica de validación es la misma de antes.
+// La barra superior con la flecha y el título "Registro de captador" la pone MainActivity.
+// OJO: lo que falta (enviar la solicitud al servidor) es del Diego,Jose.
 @Composable
 fun RegistroCaptadorScreen(
     onVolverLogin: () -> Unit = {}
@@ -31,117 +38,81 @@ fun RegistroCaptadorScreen(
     var telefono by remember { mutableStateOf("") }
     var contrasena by remember { mutableStateOf("") }
 
-    var mostrarContrasena by remember { mutableStateOf(false) }
     var mensaje by remember { mutableStateOf("") }
     var registroValido by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Fondo)
+            .background(DuocFondo)
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .padding(horizontal = 24.dp, vertical = 20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text(
-            text = "Registro de captador",
-            color = AzulDuoc,
-            fontSize = 27.sp,
-            style = MaterialTheme.typography.headlineMedium
-        )
-
-        Text(
             text = "Crea tu cuenta",
-            style = MaterialTheme.typography.titleLarge
+            color = DuocNavy,
+            fontSize = 30.sp,
+            fontWeight = FontWeight.Bold
         )
-
         Text(
             text = "Completa tus datos para poder captar alumnos en los eventos.",
-            color = Color.DarkGray
+            color = DuocGris
         )
 
-        OutlinedTextField(
-            value = nombre,
-            onValueChange = {
+        DuocField(
+            etiqueta = "Nombre completo",
+            valor = nombre,
+            onCambio = {
                 nombre = it
                 mensaje = ""
             },
-            label = { Text("Nombre completo") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+            placeholder = "Nombre y apellidos"
         )
-
-        OutlinedTextField(
-            value = rut,
-            onValueChange = {
+        DuocField(
+            etiqueta = "RUT",
+            valor = rut,
+            onCambio = {
                 rut = it
                 mensaje = ""
             },
-            label = { Text("RUT") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+            placeholder = "12.345.678-9"
         )
-
-        OutlinedTextField(
-            value = correo,
-            onValueChange = {
+        DuocField(
+            etiqueta = "Correo",
+            valor = correo,
+            onCambio = {
                 correo = it
                 mensaje = ""
             },
-            label = { Text("Correo electrónico") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Email
-            )
+            placeholder = "nombre@correo.cl",
+            teclado = KeyboardType.Email
         )
-
-        OutlinedTextField(
-            value = telefono,
-            onValueChange = {
+        DuocField(
+            etiqueta = "Teléfono",
+            valor = telefono,
+            onCambio = {
                 telefono = it
                 mensaje = ""
             },
-            label = { Text("Teléfono") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Phone
-            )
+            placeholder = "+56 9 1234 5678",
+            teclado = KeyboardType.Phone
         )
-
-        OutlinedTextField(
-            value = contrasena,
-            onValueChange = {
+        DuocPasswordField(
+            etiqueta = "Contraseña",
+            valor = contrasena,
+            onCambio = {
                 contrasena = it
                 mensaje = ""
             },
-            label = { Text("Contraseña") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            visualTransformation = if (mostrarContrasena) {
-                VisualTransformation.None
-            } else {
-                PasswordVisualTransformation()
-            },
-            trailingIcon = {
-                TextButton(
-                    onClick = {
-                        mostrarContrasena = !mostrarContrasena
-                    }
-                ) {
-                    Text(if (mostrarContrasena) "Ocultar" else "Mostrar")
-                }
-            }
+            placeholder = "Mínimo 8 caracteres",
+            imeAction = ImeAction.Done
         )
 
-        Text(
-            text = "Tu solicitud será revisada por un administrador antes de activar la cuenta.",
-            color = AzulDuoc,
-            style = MaterialTheme.typography.bodyMedium
-        )
+        DuocBannerInfo("Tu solicitud será revisada por un administrador antes de activar la cuenta.")
 
-        Button(
+        DuocBotonAmarillo(
+            texto = "Solicitar registro",
             onClick = {
                 mensaje = when {
                     nombre.isBlank() ||
@@ -165,42 +136,29 @@ fun RegistroCaptadorScreen(
                 registroValido = mensaje.isEmpty()
 
                 if (registroValido) {
-                    mensaje =
-                        "Datos validados. Falta enviar la solicitud al servidor."
+                    mensaje = "Datos validados. Falta enviar la solicitud al servidor."
                 }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = AzulDuoc,
-                contentColor = Color.White
-            )
-        ) {
-            Text("Solicitar registro")
-        }
+            }
+        )
 
         if (mensaje.isNotEmpty()) {
             Text(
                 text = mensaje,
-                color = if (registroValido) {
-                    AzulDuoc
-                } else {
-                    MaterialTheme.colorScheme.error
-                },
-                style = MaterialTheme.typography.bodyMedium
+                color = if (registroValido) DuocNavy else DuocError,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
             )
         }
 
-        TextButton(
-            onClick = onVolverLogin,
-            modifier = Modifier.fillMaxWidth()
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "¿Ya tienes cuenta? Inicia sesión",
-                color = AzulDuoc
-            )
+            Text("¿Ya tienes cuenta?", color = DuocGris, fontSize = 14.sp)
+            TextButton(onClick = onVolverLogin) {
+                Text("Inicia sesión", color = DuocNavy, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
