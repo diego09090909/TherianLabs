@@ -1,8 +1,12 @@
 package cl.therionlabs.myapplication.viewmodels
 
 import androidx.lifecycle.ViewModel
+import cl.therionlabs.myapplication.data.RetrofitClient
 import cl.therionlabs.myapplication.model.EventoQr
+import cl.therionlabs.myapplication.model.EventosDemo
+import cl.therionlabs.myapplication.model.ResultadoEvento
 import cl.therionlabs.myapplication.model.ResumenProspecto
+import cl.therionlabs.myapplication.model.aEventoQr
 import cl.therionlabs.myapplication.navigation.NavigationEvent
 import cl.therionlabs.myapplication.navigation.Screen
 import kotlinx.coroutines.CoroutineScope
@@ -13,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.IOException
 
 class MainViewModel : ViewModel() {
 
@@ -31,6 +36,23 @@ class MainViewModel : ViewModel() {
         _ultimoGuardado.value = resumen
     }
 
+    suspend fun resolverEvento(codigo: String): ResultadoEvento {
+        val id = codigo.trim().uppercase()
+        val sinRed = ResultadoEvento.SinConexion(EventosDemo.desdeCodigo(id))
+        return try {
+            val respuesta = RetrofitClient.api.obtenerEvento(id)
+            val dto = respuesta.body()
+            when {
+                respuesta.code() == 404 -> ResultadoEvento.NoExiste
+                !respuesta.isSuccessful || dto == null -> sinRed
+                dto.estado == "CERRADO" -> ResultadoEvento.Cerrado
+                else -> ResultadoEvento.Encontrado(dto.aEventoQr())
+            }
+        } catch (e: IOException) {
+            sinRed
+        }
+    }
+
     fun popTo(screen: Screen) {
         CoroutineScope(Dispatchers.Main).launch {
             _navigationEvents.emit(NavigationEvent.PopTo(screen))
@@ -45,7 +67,7 @@ class MainViewModel : ViewModel() {
 
     fun popBackStack(){
         CoroutineScope(Dispatchers.Main).launch{
-        _navigationEvents.emit(NavigationEvent.PopBackStack)
+            _navigationEvents.emit(NavigationEvent.PopBackStack)
         }
     }
 }

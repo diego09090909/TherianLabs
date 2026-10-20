@@ -1,5 +1,9 @@
 package cl.therionlabs.myapplication.model
 
+import cl.therionlabs.myapplication.data.EventoDto
+import java.text.SimpleDateFormat
+import java.util.Locale
+
 data class EventoQr(
     val id: String,
     val liceo: String,
@@ -23,4 +27,14 @@ object EventosDemo {
             EventoQr(id = id, liceo = "Por confirmar", nombre = "Evento $id", fecha = "-")
         }
     }
+}
+
+fun EventoDto.aEventoQr(): EventoQr {
+    val fechaBonita = try {
+        val origen = SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(fecha)
+        SimpleDateFormat("d MMM yyyy", Locale.forLanguageTag("es-CL")).format(origen!!)
+    } catch (e: Exception) {
+        fecha
+    }
+    return EventoQr(id = id, liceo = liceo, nombre = nombre, fecha = fechaBonita)
 }

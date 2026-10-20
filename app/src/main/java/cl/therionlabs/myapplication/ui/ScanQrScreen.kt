@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,8 +47,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cl.therionlabs.myapplication.model.EventoQr
 import cl.therionlabs.myapplication.model.EventosDemo
+import cl.therionlabs.myapplication.model.ResultadoEvento
 import cl.therionlabs.myapplication.navigation.Screen
 import cl.therionlabs.myapplication.viewmodels.MainViewModel
+import kotlinx.coroutines.launch
 
 private val FondoScan = Color(0xFF061633)
 private val PanelScan = Color(0xFF0E2556)
@@ -55,10 +58,27 @@ private val PanelScan = Color(0xFF0E2556)
 @Composable
 fun ScanQrScreen(mainViewModel: MainViewModel) {
     var codigo by remember { mutableStateOf("") }
+    var buscando by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
     fun abrirEvento(evento: EventoQr) {
         mainViewModel.seleccionarEvento(evento)
         mainViewModel.navigateTo(Screen.EventoDetectado)
+    }
+
+    fun buscarEvento(texto: String) {
+        scope.launch {
+            buscando = true
+            error = null
+            when (val resultado = mainViewModel.resolverEvento(texto)) {
+                is ResultadoEvento.Encontrado -> abrirEvento(resultado.evento)
+                is ResultadoEvento.SinConexion -> abrirEvento(resultado.evento)
+                ResultadoEvento.Cerrado -> error = "Este evento ya está cerrado. Consulta con la administradora."
+                ResultadoEvento.NoExiste -> error = "Ese código de evento no existe. Revisa que esté bien escrito."
+            }
+            buscando = false
+        }
     }
 
     Column(
@@ -110,7 +130,7 @@ fun ScanQrScreen(mainViewModel: MainViewModel) {
             Spacer(Modifier.height(32.dp))
 
             // DEMO: al tocar el recuadro se simula la lectura del QR
-            MarcoEscaner(onClick = { abrirEvento(EventosDemo.feriaVocacional) })
+            MarcoEscaner(onClick = { buscarEvento(EventosDemo.feriaVocacional.id) })
 
             Spacer(Modifier.height(16.dp))
             Text(
@@ -149,7 +169,7 @@ fun ScanQrScreen(mainViewModel: MainViewModel) {
             ) {
                 OutlinedTextField(
                     value = codigo,
-                    onValueChange = { codigo = it },
+                    onValueChange = { codigo = it; error = null },
                     placeholder = { Text("Ej: EVT-0042") },
                     singleLine = true,
                     shape = RoundedCornerShape(16.dp),
@@ -165,8 +185,8 @@ fun ScanQrScreen(mainViewModel: MainViewModel) {
                     modifier = Modifier.weight(1f)
                 )
                 Button(
-                    onClick = { abrirEvento(EventosDemo.desdeCodigo(codigo)) },
-                    enabled = codigo.isNotBlank(),
+                    onClick = { buscarEvento(codigo) },
+                    enabled = codigo.isNotBlank() && !buscando,
                     modifier = Modifier.height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -176,8 +196,12 @@ fun ScanQrScreen(mainViewModel: MainViewModel) {
                         disabledContentColor = DuocNavy.copy(alpha = 0.5f)
                     )
                 ) {
-                    Text("Continuar", fontWeight = FontWeight.Bold)
+                    Text(if (buscando) "Buscando…" else "Continuar", fontWeight = FontWeight.Bold)
                 }
+            }
+            error?.let {
+                Spacer(Modifier.height(10.dp))
+                Text(text = it, color = Color(0xFFFF8A80), fontSize = 14.sp)
             }
         }
     }
