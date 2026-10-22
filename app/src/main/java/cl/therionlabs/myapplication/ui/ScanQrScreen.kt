@@ -1,10 +1,18 @@
 package cl.therionlabs.myapplication.ui
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,6 +32,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -33,6 +42,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.compose.runtime.LaunchedEffect
+import org.json.JSONObject
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,6 +75,41 @@ fun ScanQrScreen(mainViewModel: MainViewModel) {
     var buscando by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    // ----- Permiso de cámara -----
+    fun tienePermiso() = ContextCompat.checkSelfPermission(
+        context, Manifest.permission.CAMERA
+    ) == PackageManager.PERMISSION_GRANTED
+
+    var permitido by remember { mutableStateOf(tienePermiso()) }
+    var rechazado by remember { mutableStateOf(false) }
+    var ultimoQr by remember { mutableStateOf<String?>(null) }
+
+    val pedirPermiso = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { concedido ->
+        permitido = concedido
+        rechazado = !concedido
+    }
+
+    // Al abrir la pantalla se pide el permiso (si aún no está concedido)
+    LaunchedEffect(Unit) {
+        if (!permitido) pedirPermiso.launch(Manifest.permission.CAMERA)
+    }
+
+    // Si el usuario lo activó desde Ajustes y vuelve a la app
+    LifecycleResumeEffect(Unit) {
+        permitido = tienePermiso()
+        onPauseOrDispose { }
+    }
+
+    fun abrirAjustes() {
+        context.startActivity(
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                .setData(Uri.fromParts("package", context.packageName, null))
+        )
+    }
 
     fun abrirEvento(evento: EventoQr) {
         mainViewModel.seleccionarEvento(evento)
@@ -79,6 +128,15 @@ fun ScanQrScreen(mainViewModel: MainViewModel) {
             }
             buscando = false
         }
+    }
+
+    // El QR del panel trae un JSON {"id": "...", "liceo": "...", ...}; también se acepta el código suelto.
+    fun alLeerQr(texto: String) {
+        if (buscando || texto == ultimoQr) return
+        ultimoQr = texto
+        val id = runCatching { JSONObject(texto).getString("id") }.getOrDefault(texto)
+        codigo = id.trim().uppercase()
+        buscarEvento(id)
     }
 
     Column(
@@ -129,16 +187,43 @@ fun ScanQrScreen(mainViewModel: MainViewModel) {
             )
             Spacer(Modifier.height(32.dp))
 
-            // DEMO: al tocar el recuadro se simula la lectura del QR
-            MarcoEscaner(onClick = { buscarEvento(EventosDemo.feriaVocacional.id) })
-
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = "(demo) toca el recuadro para simular que se leyó el QR",
-                color = Color.White.copy(alpha = 0.6f),
-                fontSize = 13.sp,
-                textAlign = TextAlign.Center
-            )
+            if (permitido) {
+                MarcoEscaner(conCamara = true, onClick = {}) {
+                    CamaraQr(
+                        activo = !buscando,
+                        onQrLeido = ::alLeerQr,
+                        modifier = Modifier.matchParentSize()
+                    )
+                }
+                if (buscando) {
+                    Spacer(Modifier.height(16.dp))
+                    Text("Buscando evento…", color = Color.White.copy(alpha = 0.75f), fontSize = 14.sp)
+                }
+            } else {
+                MarcoEscaner(conCamara = false, onClick = { pedirPermiso.launch(Manifest.permission.CAMERA) })
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = "Necesitamos usar la cámara para escanear el QR del evento.",
+                    color = Color.White.copy(alpha = 0.75f),
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(12.dp))
+                Button(
+                    onClick = { pedirPermiso.launch(Manifest.permission.CAMERA) },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = DuocYellow, contentColor = DuocNavy)
+                ) {
+                    Text("Activar cámara", fontWeight = FontWeight.Bold)
+                }
+                if (rechazado) {
+                    Spacer(Modifier.height(8.dp))
+                    // Si marcó "No volver a preguntar", solo se puede activar desde Ajustes
+                    OutlinedButton(onClick = { abrirAjustes() }, shape = RoundedCornerShape(16.dp)) {
+                        Text("Abrir ajustes de la app", color = Color.White)
+                    }
+                }
+            }
         }
 
         Spacer(Modifier.height(32.dp))
@@ -208,18 +293,23 @@ fun ScanQrScreen(mainViewModel: MainViewModel) {
 }
 
 @Composable
-private fun MarcoEscaner(onClick: () -> Unit) {
+private fun MarcoEscaner(
+    conCamara: Boolean,
+    onClick: () -> Unit,
+    contenido: @Composable BoxScope.() -> Unit = {}
+) {
     Box(
         modifier = Modifier
             .size(260.dp)
-            .clickable(onClick = onClick)
+            .clickable(enabled = !conCamara, onClick = onClick)
     ) {
         Box(
             modifier = Modifier
                 .matchParentSize()
                 .padding(6.dp)
                 .clip(RoundedCornerShape(20.dp))
-                .background(PanelScan)
+                .background(PanelScan),
+            content = contenido
         )
         Canvas(modifier = Modifier.matchParentSize()) {
             val w = size.width
@@ -236,6 +326,8 @@ private fun MarcoEscaner(onClick: () -> Unit) {
             esquina(w - margen, margen, -1f, 1f)
             esquina(margen, h - margen, 1f, -1f)
             esquina(w - margen, h - margen, -1f, -1f)
+
+            if (conCamara) return@Canvas
 
             val qr = Color.White.copy(alpha = 0.28f)
             val lado = w * 0.2f
