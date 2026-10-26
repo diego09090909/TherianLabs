@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "826151159419",
+    "project_id": "therionslab",
+    "storage_bucket": "therionslab.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:826151159419:android:7246aba65106726ddf04de",
+        "android_client_info": {
+          "package_name": "cl.therionlabs.myapplication"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyClGbxzz_cunwTNkR2FmQbhnjcSSuIGAm8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
