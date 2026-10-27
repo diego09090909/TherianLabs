@@ -3,6 +3,10 @@ package cl.therionlabs.myapplication
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,7 +39,6 @@ class MainActivity : ComponentActivity() {
                 val viewModel: MainViewModel = viewModel()
                 val navController = rememberNavController()
 
-                // Colector de eventos de navegación emitidos desde el ViewModel
                 LaunchedEffect(Unit) {
                     viewModel.navigationEvents.collectLatest { event ->
                         when (event) {
@@ -63,22 +66,38 @@ class MainActivity : ComponentActivity() {
 
                 NavHost(
                     navController = navController,
-                    startDestination = Screen.Home.route // La app arranca en la pantalla de bienvenida / Home
+                    startDestination = Screen.Home.route
                 ) {
 
-                    // --- PANTALLA PRINCIPAL (HOME) ---
+                    // 1. PANTALLA BASE (HOME)
                     composable(Screen.Home.route) {
                         HomeScreen(viewModel = viewModel)
                     }
 
-                    // --- PANTALLA DE LOGIN (FIREBASE AUTH) ---
-                    composable(Screen.Login.route) {
+                    // 2. LOGIN CON ANIMACIÓN EMERGENTE (SINTAXIS CORREGIDA)
+                    composable(
+                        route = Screen.Login.route,
+                        enterTransition = {
+                            slideInVertically(
+                                initialOffsetY = { fullHeight -> fullHeight }, // 👈 initialOffsetY en lugar de initialValueOf
+                                animationSpec = tween(durationMillis = 350)
+                            )
+                        },
+                        exitTransition = {
+                            fadeOut(animationSpec = tween(250))
+                        },
+                        popExitTransition = {
+                            slideOutVertically(
+                                targetOffsetY = { fullHeight -> fullHeight }, // 👈 targetOffsetY en lugar de targetValueOf
+                                animationSpec = tween(durationMillis = 350)
+                            )
+                        }
+                    ) {
                         Column(modifier = Modifier.fillMaxSize()) {
                             DuocTopBar("Iniciar sesión") { viewModel.popBackStack() }
                             Box(modifier = Modifier.weight(1f)) {
                                 LoginScreen(
                                     onLoginSuccess = {
-                                        // Login exitoso: Navega al Dashboard (Menú Principal) limpiando el Login de la pila
                                         navController.navigate("main_dashboard") {
                                             popUpTo(Screen.Home.route) { inclusive = true }
                                         }
@@ -91,34 +110,51 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // --- REGISTRO DE CAPTADOR ---
-                    composable("registro_captador") {
+                    // 3. REGISTRO DE CAPTADOR CON ANIMACIÓN EMERGENTE (SINTAXIS CORREGIDA)
+                    composable(
+                        route = "registro_captador",
+                        enterTransition = {
+                            slideInVertically(
+                                initialOffsetY = { fullHeight -> fullHeight },
+                                animationSpec = tween(durationMillis = 350)
+                            )
+                        },
+                        popExitTransition = {
+                            slideOutVertically(
+                                targetOffsetY = { fullHeight -> fullHeight },
+                                animationSpec = tween(durationMillis = 350)
+                            )
+                        }
+                    ) {
                         Column(modifier = Modifier.fillMaxSize()) {
                             DuocTopBar("Registro de captador") { viewModel.popBackStack() }
                             Box(modifier = Modifier.weight(1f)) {
                                 RegistroCaptadorScreen(
                                     onVolverLogin = {
-                                        navController.popBackStack() // Al crear cuenta vuelve al Login/Home
+                                        navController.popBackStack()
                                     }
                                 )
                             }
                         }
                     }
 
-                    // --- DASHBOARD INTERMEDIO CON BOTTOM NAVIGATION BAR ---
+                    // 4. MAIN DASHBOARD
                     composable("main_dashboard") {
                         MainDashboardScreen(
                             mainViewModel = viewModel,
                             onStartEventCapture = { eventId ->
-                                // Al confirmar el QR o evento, inicia la toma de prospectos
                                 navController.navigate(Screen.Guardado.route)
                             }
                         )
                     }
 
-                    // --- FLUJO DE CAPTURA Y EVENTO ---
+                    // 5. RESTO DE PANTALLAS
                     composable(Screen.EventoDetectado.route) {
                         EventoDetectadoScreen(mainViewModel = viewModel)
+                    }
+
+                    composable(Screen.Register.route) {
+                        RegisterScreen(mainViewModel = viewModel)
                     }
 
                     composable(Screen.Guardado.route) {

@@ -10,15 +10,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,19 +35,35 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import cl.therionlabs.myapplication.viewmodels.LoginUiState
+import cl.therionlabs.myapplication.viewmodels.LoginViewModel
 
-// Solo cambia el aspecto (según el boceto). La barra superior con la flecha de volver
-// y el título "Iniciar sesión" la pone MainActivity.
-// OJO: la lógica de inicio de sesión real es del equipo de backend/Diego,Jose.
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
-    onNavigateToRegister: () -> Unit
+    onNavigateToRegister: () -> Unit,
+    viewModel: LoginViewModel = viewModel()
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorCorreo by remember { mutableStateOf<String?>(null) }
     var errorClave by remember { mutableStateOf<String?>(null) }
+
+
+    val uiState by viewModel.uiState.collectAsState()
+
+
+    LaunchedEffect(uiState) {
+        when (uiState) {
+            is LoginUiState.Success -> {
+
+                onLoginSuccess()
+                viewModel.resetearEstado()
+            }
+            else -> {}
+        }
+    }
 
     fun ingresar() {
         errorCorreo = when {
@@ -53,10 +74,9 @@ fun LoginScreen(
         }
         errorClave = if (password.isBlank()) "Ingresa tu contraseña." else null
 
+
         if (errorCorreo == null && errorClave == null) {
-            // TODO(compañero): reemplazar por la llamada real al servidor.
-            // Por ahora deja pasar a cualquier correo y contraseña con formato válido.
-            onLoginSuccess()
+            viewModel.iniciarSesion(email, password)
         }
     }
 
@@ -87,26 +107,43 @@ fun LoginScreen(
             onCambio = {
                 email = it
                 errorCorreo = null
+                if (uiState is LoginUiState.Error) viewModel.resetearEstado()
             },
             placeholder = "nombre@correo.cl",
             error = errorCorreo,
             teclado = KeyboardType.Email
         )
+
         DuocPasswordField(
             etiqueta = "Contraseña",
             valor = password,
             onCambio = {
                 password = it
                 errorClave = null
+                if (uiState is LoginUiState.Error) viewModel.resetearEstado()
             },
             placeholder = "Tu contraseña",
             error = errorClave,
             imeAction = ImeAction.Done
         )
 
+
+        if (uiState is LoginUiState.Error) {
+            Text(
+                text = (uiState as LoginUiState.Error).mensaje,
+                color = MaterialTheme.colorScheme.error,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+
         Spacer(Modifier.height(4.dp))
 
-        DuocBotonAzul(texto = "Ingresar", onClick = { ingresar() })
+
+        DuocBotonAzul(
+            texto = if (uiState is LoginUiState.Loading) "Autenticando..." else "Ingresar",
+            onClick = { ingresar() }
+        )
 
         Row(
             modifier = Modifier.fillMaxWidth(),
