@@ -10,7 +10,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -19,7 +18,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -33,20 +31,14 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.compose.LifecycleResumeEffect
-import androidx.compose.runtime.LaunchedEffect
-import org.json.JSONObject
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,23 +47,26 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import cl.therionlabs.myapplication.model.EventoQr
-import cl.therionlabs.myapplication.model.EventosDemo
 import cl.therionlabs.myapplication.model.ResultadoEvento
 import cl.therionlabs.myapplication.navigation.Screen
 import cl.therionlabs.myapplication.viewmodels.MainViewModel
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 private val FondoScan = Color(0xFF061633)
 private val PanelScan = Color(0xFF0E2556)
 
+// Pantalla solo de escaneo de QR. El ingreso del código a mano está en CodigoManualScreen.
 @Composable
 fun ScanQrScreen(mainViewModel: MainViewModel) {
-    var codigo by remember { mutableStateOf("") }
     var buscando by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -127,6 +122,8 @@ fun ScanQrScreen(mainViewModel: MainViewModel) {
                 ResultadoEvento.NoExiste -> error = "Ese código de evento no existe. Revisa que esté bien escrito."
             }
             buscando = false
+            // Si hubo error, se permite volver a leer el mismo QR
+            if (error != null) ultimoQr = null
         }
     }
 
@@ -135,7 +132,6 @@ fun ScanQrScreen(mainViewModel: MainViewModel) {
         if (buscando || texto == ultimoQr) return
         ultimoQr = texto
         val id = runCatching { JSONObject(texto).getString("id") }.getOrDefault(texto)
-        codigo = id.trim().uppercase()
         buscarEvento(id)
     }
 
@@ -144,7 +140,6 @@ fun ScanQrScreen(mainViewModel: MainViewModel) {
             .fillMaxSize()
             .background(FondoScan)
             .systemBarsPadding()
-            .imePadding()
             .verticalScroll(rememberScrollState())
     ) {
         Row(
@@ -199,6 +194,15 @@ fun ScanQrScreen(mainViewModel: MainViewModel) {
                     Spacer(Modifier.height(16.dp))
                     Text("Buscando evento…", color = Color.White.copy(alpha = 0.75f), fontSize = 14.sp)
                 }
+                error?.let {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = it,
+                        color = Color(0xFFFF8A80),
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
             } else {
                 MarcoEscaner(conCamara = false, onClick = { pedirPermiso.launch(Manifest.permission.CAMERA) })
                 Spacer(Modifier.height(16.dp))
@@ -227,68 +231,6 @@ fun ScanQrScreen(mainViewModel: MainViewModel) {
         }
 
         Spacer(Modifier.height(32.dp))
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(PanelScan)
-                .padding(16.dp)
-        ) {
-            Text(
-                text = "¿No tienes el QR a mano?",
-                color = Color.White,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Escribe el código del evento que te dio el liceo.",
-                color = Color.White.copy(alpha = 0.75f),
-                fontSize = 14.sp
-            )
-            Spacer(Modifier.height(12.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedTextField(
-                    value = codigo,
-                    onValueChange = { codigo = it; error = null },
-                    placeholder = { Text("Ej: EVT-0042") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = DuocYellow,
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
-                        cursorColor = DuocYellow,
-                        focusedPlaceholderColor = Color.White.copy(alpha = 0.5f),
-                        unfocusedPlaceholderColor = Color.White.copy(alpha = 0.5f)
-                    ),
-                    modifier = Modifier.weight(1f)
-                )
-                Button(
-                    onClick = { buscarEvento(codigo) },
-                    enabled = codigo.isNotBlank() && !buscando,
-                    modifier = Modifier.height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = DuocYellow,
-                        contentColor = DuocNavy,
-                        disabledContainerColor = DuocYellow.copy(alpha = 0.4f),
-                        disabledContentColor = DuocNavy.copy(alpha = 0.5f)
-                    )
-                ) {
-                    Text(if (buscando) "Buscando…" else "Continuar", fontWeight = FontWeight.Bold)
-                }
-            }
-            error?.let {
-                Spacer(Modifier.height(10.dp))
-                Text(text = it, color = Color(0xFFFF8A80), fontSize = 14.sp)
-            }
-        }
     }
 }
 

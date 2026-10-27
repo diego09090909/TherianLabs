@@ -36,6 +36,7 @@ import cl.therionlabs.myapplication.ui.ScanQrScreen
 import cl.therionlabs.myapplication.ui.theme.MyApplicationTheme
 import cl.therionlabs.myapplication.viewmodels.MainViewModel
 import kotlinx.coroutines.flow.collectLatest
+import cl.therionlabs.myapplication.ui.CodigoManualScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -213,6 +214,25 @@ class MainActivity : ComponentActivity() {
                         }
                     ) {
                         ScanQrScreen(mainViewModel = viewModel)
+                    }
+
+                    // 4c. CÓDIGO MANUAL: sube desde abajo
+                    composable(
+                        route = Screen.CodigoManual.route,
+                        enterTransition = {
+                            slideInVertically(
+                                initialOffsetY = { fullHeight -> fullHeight },
+                                animationSpec = tween(durationMillis = 350)
+                            )
+                        },
+                        popExitTransition = {
+                            slideOutVertically(
+                                targetOffsetY = { fullHeight -> fullHeight },
+                                animationSpec = tween(durationMillis = 350)
+                            )
+                        }
+                    ) {
+                        CodigoManualScreen(mainViewModel = viewModel)
                     }
 
                     // 5. RESTO DE PANTALLAS (usan la transición por defecto)

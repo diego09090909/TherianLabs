@@ -85,6 +85,11 @@ fun MainDashboardScreen(
         mainViewModel.navigateTo(Screen.Scan)
     }
 
+    fun irAManual() {
+        menuAbierto = false
+        mainViewModel.navigateTo(Screen.CodigoManual)
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(DuocFondo)) {
         Column(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.weight(1f)) {
@@ -143,7 +148,7 @@ fun MainDashboardScreen(
             abierto = menuAbierto,
             onToggle = { menuAbierto = !menuAbierto },
             onEscanear = { irAEscanear() },
-            onManual = { irAEscanear() }
+            onManual = { irAManual() }
         )
     }
 }
