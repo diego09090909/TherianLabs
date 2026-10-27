@@ -8,6 +8,7 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
 
+// 1. DTO de Transferencia de Datos
 data class ProspectoDto(
     val eventoId: String,
     val nombreCompleto: String,
@@ -26,19 +27,20 @@ data class EventoDto(
     val id: String,
     val nombre: String,
     val liceo: String,
-    val fecha: String,   // llega como AAAA-MM-DD
-    val estado: String   // ACTIVO o CERRADO
+    val fecha: String,
+    val estado: String
 )
 
+// 2. Interfaz con los endpoints de Retrofit
 interface ApiService {
     @POST("api/prospectos/lote")
     suspend fun enviarLote(@Body lote: List<ProspectoDto>): Response<Unit>
 
-    // Busca un evento por su código (el mismo que trae el QR).
     @GET("api/eventos/{id}")
     suspend fun obtenerEvento(@Path("id") id: String): Response<EventoDto>
 }
 
+// 3. Cliente Retrofit Singleton
 const val BASE_URL = "http://10.0.2.2:8080/"
 
 object RetrofitClient {
