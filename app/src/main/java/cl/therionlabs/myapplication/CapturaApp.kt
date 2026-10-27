@@ -11,11 +11,10 @@ import kotlinx.coroutines.SupervisorJob
 
 class CapturaApp : Application() {
 
-    // Scope global de corrutinas respaldado por la aplicación
-    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // Scope que vive tanto como la app; la BD lo usa para cargar las carreras al crearse
+    val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     val repository: ProspectoRepository by lazy {
-        // 👈 SE LE PASAN AMBOS PARÁMETROS A AppDatabase: context y scope
         val db = AppDatabase.obtenerInstancia(this, applicationScope)
 
         ProspectoRepository(
