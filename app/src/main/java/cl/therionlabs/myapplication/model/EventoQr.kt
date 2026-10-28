@@ -14,18 +14,22 @@ data class EventoQr(
 object EventosDemo {
     val feriaVocacional = EventoQr(
         id = "EVT-0042",
-        liceo = "Liceo Bicentenario Ejemplo",
+        liceo = "Liceo Bicentenario",
         nombre = "Feria Vocacional 2026",
         fecha = "14 oct 2026"
     )
 
+    private val todos = listOf(
+        feriaVocacional,
+        EventoQr("EVT-0043", "Colegio San Mateo", "Feria de Carreras", "21 oct 2026"),
+        EventoQr("EVT-0044", "Liceo Industrial de Maipú", "Charla Vocacional", "28 oct 2026"),
+        EventoQr("EVT-0045", "Liceo Bicentenario Providencia", "Expo Duoc", "04 nov 2026")
+    )
+
     fun desdeCodigo(codigo: String): EventoQr {
         val id = codigo.trim().uppercase()
-        return if (id == feriaVocacional.id) {
-            feriaVocacional
-        } else {
-            EventoQr(id = id, liceo = "Por confirmar", nombre = "Evento $id", fecha = "-")
-        }
+        return todos.firstOrNull { it.id == id }
+            ?: EventoQr(id = id, liceo = "Por confirmar", nombre = "Evento $id", fecha = "-")
     }
 }
 

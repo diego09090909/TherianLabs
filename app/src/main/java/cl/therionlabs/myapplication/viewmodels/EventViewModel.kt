@@ -26,7 +26,7 @@ class EventViewModel : ViewModel() {
             _uiState.value = EventUiState.Success(
                 Evento(
                     id = "EVT-0042",
-                    nombreLiceo = "Liceo Bicentenario Ejemplo",
+                    nombreLiceo = "Liceo Bicentenario",
                     nombreEvento = "Feria Vocacional 2026",
                     fecha = "14 oct 2026"
                 )
