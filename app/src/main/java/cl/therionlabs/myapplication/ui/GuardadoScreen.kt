@@ -1,7 +1,6 @@
 package cl.therionlabs.myapplication.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,7 +30,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -64,20 +62,25 @@ fun GuardadoScreen(mainViewModel: MainViewModel) {
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Spacer(Modifier.height(24.dp))
+
+                // Check de doble aro
                 Box(
-                    modifier = Modifier
-                        .size(96.dp)
-                        .clip(CircleShape)
-                        .background(DuocVerdeSuave),
+                    Modifier.size(104.dp).clip(CircleShape).background(DuocVerdeSuave),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        tint = DuocVerde,
-                        modifier = Modifier.size(48.dp)
-                    )
+                    Box(
+                        Modifier.size(72.dp).clip(CircleShape).background(DuocTurquesa),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = null,
+                            tint = DuocNavy,
+                            modifier = Modifier.size(38.dp)
+                        )
+                    }
                 }
+
                 Text(
                     text = "Prospecto guardado en el dispositivo",
                     color = DuocNavy,
@@ -85,20 +88,31 @@ fun GuardadoScreen(mainViewModel: MainViewModel) {
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
-                Text(
-                    text = "Se subirá al servidor automáticamente cuando el teléfono detecte conexión.",
-                    color = DuocGris,
-                    textAlign = TextAlign.Center
-                )
+
+                // Aviso: fondo azul suave, sin borde
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(DuocAzulSuave)
+                        .padding(14.dp)
+                ) {
+                    Text(
+                        text = "Se subirá al servidor automáticamente cuando el teléfono detecte conexión.",
+                        color = DuocNavy,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
 
                 Spacer(Modifier.height(8.dp))
 
+                // Tarjeta de datos
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Color.White)
-                        .border(1.dp, DuocBorde.copy(alpha = 0.6f), RoundedCornerShape(20.dp))
+                        .tarjeta(20.dp)
                 ) {
                     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                         Text(
@@ -169,6 +183,7 @@ fun GuardadoScreen(mainViewModel: MainViewModel) {
             // Todavía no existe el panel del boceto (pág. 4): por ahora vuelve al escáner
             DuocBotonContorno(
                 texto = "Volver al panel",
+                color = DuocAzulAcento,
                 onClick = { mainViewModel.popTo(Screen.Scan) }
             )
         }

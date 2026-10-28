@@ -49,6 +49,16 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Dp
 
 val DuocNavy = Color(0xFF0A2250)          // barras, títulos, fondo del inicio
 val DuocAzulAcento = Color(0xFF193E85)    // círculo decorativo
@@ -68,31 +78,64 @@ val DuocErrorBorde = Color(0xFFF2B8B8)
 val DuocErrorTexto = Color(0xFF8E1B1B)
 val DuocVerde = Color(0xFF1B6B3A)         // texto sobre verde suave (5,6:1)
 val DuocVerdeSuave = Color(0xFFDCF2E5)    // etiqueta "Sincronizado"
+val DuocTurquesa = Color(0xFF3DE0C8)      // círculo pequeño de la cabecera, check, barra de progreso
+
+val DuocDegradado = Brush.linearGradient(listOf(DuocNavy, DuocAzulAcento))
 
 
+
+
+// Cabecera con degradado y los dos círculos decorativos
+@Composable
+fun DuocCabecera(
+    modifier: Modifier = Modifier,
+    circulo: Dp = 150.dp,
+    contenido: @Composable BoxScope.() -> Unit
+) {
+    Box(modifier = modifier.fillMaxWidth().clipToBounds().background(DuocDegradado)) {
+        Box(
+            Modifier.align(Alignment.TopEnd)
+                .offset(x = circulo * 0.2f, y = -(circulo * 0.3f))
+                .size(circulo).clip(CircleShape)
+                .background(DuocYellow.copy(alpha = 0.92f))
+        )
+        Box(
+            Modifier.align(Alignment.BottomEnd)
+                .offset(x = -(circulo * 0.57f), y = circulo * 0.2f)
+                .size(circulo * 0.44f).clip(CircleShape)
+                .background(DuocTurquesa.copy(alpha = 0.85f))
+        )
+        contenido()
+    }
+}
+
+// Tarjeta blanca con sombra suave
+fun Modifier.tarjeta(radio: Dp = 18.dp): Modifier {
+    val forma = RoundedCornerShape(radio)
+    return this
+        .shadow(6.dp, forma, ambientColor = DuocNavy.copy(alpha = 0.10f), spotColor = DuocNavy.copy(alpha = 0.10f))
+        .clip(forma)
+        .background(Color.White)
+}
+
+// Sube un bloque sobre el anterior (para las tarjetas que montan sobre la cabecera)
+fun Modifier.solapar(arriba: Dp): Modifier = this.layout { medida, restricciones ->
+    val p = medida.measure(restricciones)
+    val a = arriba.roundToPx()
+    layout(p.width, p.height - a) { p.place(0, -a) }
+}
 @Composable
 fun DuocTopBar(titulo: String, onBack: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(DuocNavy)
-            .statusBarsPadding()
-            .padding(horizontal = 8.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(onClick = onBack) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Volver",
-                tint = Color.White
-            )
+    DuocCabecera(circulo = 96.dp) {
+        Row(
+            modifier = Modifier.statusBarsPadding().padding(horizontal = 8.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = Color.White)
+            }
+            Text(titulo, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
         }
-        Text(
-            text = titulo,
-            color = Color.White,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
     }
 }
 

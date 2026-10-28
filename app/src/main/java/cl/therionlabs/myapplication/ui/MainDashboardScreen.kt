@@ -1,12 +1,17 @@
 package cl.therionlabs.myapplication.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -26,6 +31,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -46,6 +53,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -54,11 +62,6 @@ import cl.therionlabs.myapplication.navigation.Screen
 import cl.therionlabs.myapplication.viewmodels.DashboardViewModel
 import cl.therionlabs.myapplication.viewmodels.MainViewModel
 import com.google.firebase.auth.FirebaseAuth
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 
 @Composable
 fun MainDashboardScreen(
@@ -72,23 +75,26 @@ fun MainDashboardScreen(
     val estado by dashboardViewModel.estado.collectAsState()
     val nombre by dashboardViewModel.nombre.collectAsState()
 
-    val orden = listOf(
-        BottomNavItem.Home.route,
-        BottomNavItem.History.route,
-        BottomNavItem.Profile.route
+    val items = listOf(
+        BottomNavItem.Home,
+        BottomNavItem.History,
+        BottomNavItem.Prospectos,
+        BottomNavItem.Profile
     )
+    val orden = items.map { it.route }
 
     BackHandler(enabled = menuAbierto) { menuAbierto = false }
 
-    fun irAEscanear() {
-        menuAbierto = false
-        mainViewModel.navigateTo(Screen.Scan)
-    }
-
-    fun irAManual() {
-        menuAbierto = false
-        mainViewModel.navigateTo(Screen.CodigoManual)
-    }
+    val acciones = listOf(
+        AccionMenu("Ingresar código a mano", Icons.Default.Keyboard, false) {
+            menuAbierto = false
+            mainViewModel.navigateTo(Screen.CodigoManual)
+        },
+        AccionMenu("Escanear QR del evento", Icons.Default.QrCodeScanner, true) {
+            menuAbierto = false
+            mainViewModel.navigateTo(Screen.Scan)
+        }
+    )
 
     Box(modifier = Modifier.fillMaxSize().background(DuocFondo)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -103,8 +109,16 @@ fun MainDashboardScreen(
                     label = "pestanas"
                 ) { destino ->
                     when (destino) {
-                        BottomNavItem.Home.route -> InicioTab(estado, nombre)
-                        BottomNavItem.History.route -> EventosTab(estado, onEscanear = { irAEscanear() })
+                        BottomNavItem.Home.route -> InicioTab(
+                            estado = estado,
+                            nombre = nombre,
+                            onVerProspectos = { pestana = BottomNavItem.Prospectos.route }
+                        )
+                        BottomNavItem.History.route -> EventosTab(
+                            estado,
+                            onEscanear = { mainViewModel.navigateTo(Screen.Scan) }
+                        )
+                        BottomNavItem.Prospectos.route -> ProspectosTab()
                         else -> PerfilTab(
                             estado = estado,
                             nombre = nombre,
@@ -121,21 +135,28 @@ fun MainDashboardScreen(
             }
 
             NavigationBar(containerColor = Color.White) {
-                orden.forEach { ruta ->
-                    val item = when (ruta) {
-                        BottomNavItem.Home.route -> BottomNavItem.Home
-                        BottomNavItem.History.route -> BottomNavItem.History
-                        else -> BottomNavItem.Profile
-                    }
+                items.forEach { item ->
                     NavigationBarItem(
                         selected = pestana == item.route,
                         onClick = { pestana = item.route; menuAbierto = false },
-                        icon = { Icon(item.icon, contentDescription = item.title) },
+                        icon = {
+                            BadgedBox(
+                                badge = {
+                                    if (item.route == BottomNavItem.Prospectos.route && estado.porEnviar > 0) {
+                                        Badge(containerColor = DuocYellow, contentColor = DuocNavy) {
+                                            Text(estado.porEnviar.toString())
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(item.icon, contentDescription = item.title)
+                            }
+                        },
                         label = { Text(item.title) },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = DuocNavy,
+                            selectedIconColor = DuocAzulAcento,
                             selectedTextColor = DuocNavy,
-                            indicatorColor = DuocAmarilloPill,
+                            indicatorColor = DuocAzulSuave,
                             unselectedIconColor = DuocGris,
                             unselectedTextColor = DuocGris
                         )
@@ -144,21 +165,29 @@ fun MainDashboardScreen(
             }
         }
 
-        MenuEscaneo(
+        MenuFlotante(
             abierto = menuAbierto,
             onToggle = { menuAbierto = !menuAbierto },
-            onEscanear = { irAEscanear() },
-            onManual = { irAManual() }
+            acciones = acciones
         )
     }
 }
 
+// Una opción del botón flotante. La primera de la lista queda arriba; la última, junto al botón.
+internal data class AccionMenu(
+    val texto: String,
+    val icono: ImageVector,
+    val destacada: Boolean,
+    val onClick: () -> Unit
+)
+
+// Botón flotante "+" que despliega opciones. Se usa en el panel y en "Prospecto guardado".
 @Composable
-private fun MenuEscaneo(
+internal fun MenuFlotante(
     abierto: Boolean,
     onToggle: () -> Unit,
-    onEscanear: () -> Unit,
-    onManual: () -> Unit
+    acciones: List<AccionMenu>,
+    bottomPadding: Dp = 96.dp
 ) {
     val giro by animateFloatAsState(if (abierto) 45f else 0f, label = "giroMas")
 
@@ -180,23 +209,18 @@ private fun MenuEscaneo(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .navigationBarsPadding()
-                .padding(end = 16.dp, bottom = 96.dp),
+                .padding(end = 16.dp, bottom = bottomPadding),
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            AnimatedVisibility(
-                visible = abierto,
-                enter = fadeIn() + slideInVertically { it / 2 },
-                exit = fadeOut() + slideOutVertically { it / 2 }
-            ) {
-                OpcionMenu("Ingresar código a mano", Icons.Default.Keyboard, destacada = false, onClick = onManual)
-            }
-            AnimatedVisibility(
-                visible = abierto,
-                enter = fadeIn() + slideInVertically { it / 2 },
-                exit = fadeOut() + slideOutVertically { it / 2 }
-            ) {
-                OpcionMenu("Escanear QR del evento", Icons.Default.QrCodeScanner, destacada = true, onClick = onEscanear)
+            acciones.forEach { accion ->
+                AnimatedVisibility(
+                    visible = abierto,
+                    enter = fadeIn() + slideInVertically { it / 2 },
+                    exit = fadeOut() + slideOutVertically { it / 2 }
+                ) {
+                    OpcionMenu(accion.texto, accion.icono, accion.destacada, accion.onClick)
+                }
             }
             FloatingActionButton(
                 onClick = onToggle,

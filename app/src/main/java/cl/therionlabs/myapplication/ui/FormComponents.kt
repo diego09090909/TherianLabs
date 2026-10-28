@@ -54,26 +54,19 @@ import androidx.compose.ui.text.style.TextDecoration
 @Composable
 fun DuocSeccion(normal: String, destacado: String, modifier: Modifier = Modifier) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(DuocAmarilloSuave)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+        modifier = modifier.fillMaxWidth().padding(top = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .background(DuocYellow)
-        )
-        Spacer(Modifier.width(10.dp))
+        Box(Modifier.size(width = 4.dp, height = 18.dp).clip(RoundedCornerShape(2.dp)).background(DuocYellow))
+        Spacer(Modifier.width(8.dp))
         Text(
             text = buildAnnotatedString {
                 append("$normal ")
-                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(destacado) }
+                withStyle(SpanStyle(fontWeight = FontWeight.ExtraBold)) { append(destacado) }
             },
             color = DuocNavy,
-            fontSize = 15.sp
+            fontSize = 14.sp,
+            letterSpacing = 0.8.sp
         )
     }
 }
@@ -127,8 +120,8 @@ private fun ChipOpcion(
         modifier = modifier
             .heightIn(min = 48.dp)
             .clip(forma)
-            .background(if (marcada) DuocNavy else Color.White)
-            .border(1.dp, if (marcada) DuocNavy else DuocBordeCampo, forma)
+            .background(if (marcada) DuocAzulAcento else Color.White)
+            .border(1.dp, if (marcada) DuocAzulAcento else DuocBordeCampo, forma)
             .selectable(selected = marcada, onClick = onClick, role = Role.RadioButton)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         contentAlignment = if (alinearInicio) Alignment.CenterStart else Alignment.Center
@@ -136,7 +129,7 @@ private fun ChipOpcion(
         Column(horizontalAlignment = if (alinearInicio) Alignment.Start else Alignment.CenterHorizontally) {
             Text(
                 text = opcion.titulo,
-                color = if (marcada) Color.White else DuocNavy,
+                color = if (marcada) Color.White else DuocAzulAcento,
                 fontSize = 15.sp,
                 fontWeight = if (marcada) FontWeight.Bold else FontWeight.Medium,
                 textAlign = if (alinearInicio) TextAlign.Start else TextAlign.Center
@@ -175,7 +168,7 @@ fun DuocCasilla(
             checked = marcada,
             onCheckedChange = null,
             colors = CheckboxDefaults.colors(
-                checkedColor = DuocNavy,
+                checkedColor = DuocAzulAcento,
                 uncheckedColor = DuocBordeCampo,
                 checkmarkColor = Color.White
             )
@@ -190,7 +183,7 @@ fun DuocCasilla(
                     }
                 }
             },
-            color = DuocNavy,
+            color = DuocAzulAcento,
             fontSize = 15.sp
         )
     }
