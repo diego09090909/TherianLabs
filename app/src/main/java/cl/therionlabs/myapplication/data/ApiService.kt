@@ -20,7 +20,19 @@ data class ProspectoDto(
     val carrera: String,
     val modalidad: String,
     val observaciones: String,
-    val fechaCaptura: Long
+    val fechaCaptura: Long,
+    // Campos del cupón de admisión (el backend debe agregarlos para guardarlos)
+    val carrera2: String,
+    val carrera3: String,
+    val sexo: String,
+    val fechaNacimiento: String,   // dd-MM-aaaa
+    val comunaResidencia: String,
+    val comunaColegio: String,
+    val jornada: String,
+    val sedes: List<String>,
+    val nivelInteres: String,
+    val afirmacion: String,
+    val autorizaDatos: Boolean
 )
 
 data class EventoDto(

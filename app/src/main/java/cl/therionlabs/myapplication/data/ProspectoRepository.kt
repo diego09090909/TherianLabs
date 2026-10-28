@@ -10,8 +10,8 @@ import java.io.IOException
 class ProspectoRepository(
     private val context: Context,
     private val dao: ProspectoDao,
-    private val api: ApiService,               // 👈 Tipo exacto de la interfaz de Retrofit
-    private val scope: CoroutineScope          // 👈 Scope para corrutinas en segundo plano
+    private val api: ApiService,               // Tipo exacto de la interfaz de Retrofit
+    private val scope: CoroutineScope          // Scope para corrutinas en segundo plano
 ) {
 
     fun observarTodos(): Flow<List<Prospecto>> = dao.observarTodos()
@@ -45,7 +45,18 @@ class ProspectoRepository(
                     carrera = it.carrera,
                     modalidad = it.modalidad,
                     observaciones = it.observaciones,
-                    fechaCaptura = it.fechaCaptura
+                    fechaCaptura = it.fechaCaptura,
+                    carrera2 = it.carrera2,
+                    carrera3 = it.carrera3,
+                    sexo = it.sexo,
+                    fechaNacimiento = it.fechaNacimiento,
+                    comunaResidencia = it.comunaResidencia,
+                    comunaColegio = it.comunaColegio,
+                    jornada = it.jornada,
+                    sedes = it.sedes.split("|").filter { s -> s.isNotBlank() },
+                    nivelInteres = it.nivelInteres,
+                    afirmacion = it.afirmacion,
+                    autorizaDatos = it.autorizaDatos
                 )
             }
             try {

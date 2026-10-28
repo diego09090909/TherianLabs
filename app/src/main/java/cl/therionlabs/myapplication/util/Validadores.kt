@@ -1,6 +1,7 @@
 package cl.therionlabs.myapplication.util
 
 import android.util.Patterns
+import java.util.Calendar
 
 object Validadores {
 
@@ -57,4 +58,43 @@ object Validadores {
     // Celular chileno: 9XXXXXXXX, con o sin +56
     fun telefonoValido(tel: String): Boolean =
         Regex("^(\\+?56)?9\\d{8}$").matches(tel.replace(" ", ""))
+
+    // Fecha de nacimiento del cupón: se escriben solo números y se agregan los guiones.
+    // "01022008" -> "01-02-2008"
+    fun formatearFecha(texto: String): String {
+        val digitos = texto.filter { it.isDigit() }.take(8)
+        return buildString {
+            digitos.forEachIndexed { i, c ->
+                if (i == 2 || i == 4) append('-')
+                append(c)
+            }
+        }
+    }
+
+    // dd-MM-aaaa: día y mes reales (con años bisiestos), no futura y no anterior a hace 60 años
+    fun fechaNacimientoValida(fecha: String): Boolean {
+        val m = Regex("^(\\d{2})-(\\d{2})-(\\d{4})$").matchEntire(fecha) ?: return false
+        val dia = m.groupValues[1].toInt()
+        val mes = m.groupValues[2].toInt()
+        val anio = m.groupValues[3].toInt()
+        if (mes !in 1..12 || dia < 1) return false
+
+        val bisiesto = (anio % 4 == 0 && anio % 100 != 0) || anio % 400 == 0
+        val diasDelMes = when (mes) {
+            2 -> if (bisiesto) 29 else 28
+            4, 6, 9, 11 -> 30
+            else -> 31
+        }
+        if (dia > diasDelMes) return false
+
+        val hoy = Calendar.getInstance()
+        val anioActual = hoy.get(Calendar.YEAR)
+        if (anio > anioActual || anio < anioActual - 60) return false
+        if (anio == anioActual) {
+            val mesActual = hoy.get(Calendar.MONTH) + 1
+            val diaActual = hoy.get(Calendar.DAY_OF_MONTH)
+            if (mes > mesActual || (mes == mesActual && dia > diaActual)) return false
+        }
+        return true
+    }
 }

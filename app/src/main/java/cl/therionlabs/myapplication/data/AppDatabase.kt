@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
         Prospecto::class,
         CarreraEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -77,6 +77,44 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Formulario del cupón de admisión: más datos del alumno y 3 carreras.
+        // Los registros que ya estaban guardados quedan con esos campos vacíos.
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                listOf(
+                    "carrera2", "carrera3", "sexo", "fechaNacimiento", "comunaResidencia",
+                    "comunaColegio", "jornada", "sedes", "nivelInteres", "afirmacion"
+                ).forEach { columna ->
+                    db.execSQL("ALTER TABLE `prospectos` ADD COLUMN `$columna` TEXT NOT NULL DEFAULT ''")
+                }
+                db.execSQL("ALTER TABLE `prospectos` ADD COLUMN `autorizaDatos` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        // Deja la tabla "carreras" completa. Solo agrega las que faltan, así funciona en una
+        // instalación nueva y también en un teléfono que viene de una versión anterior.
+        private fun sembrarCarrerasFaltantes(db: SupportSQLiteDatabase) {
+            if (db.isReadOnly) return
+            val cursor = db.query("SELECT COUNT(*) FROM carreras")
+            val existentes = if (cursor.moveToFirst()) cursor.getInt(0) else 0
+            cursor.close()
+            if (existentes >= CarrerasSeed.todas.size) return
+
+            db.beginTransaction()
+            try {
+                CarrerasSeed.todas.forEach { c ->
+                    db.execSQL(
+                        "INSERT INTO carreras (nombre, escuela) SELECT ?, ? " +
+                                "WHERE NOT EXISTS (SELECT 1 FROM carreras WHERE nombre = ? AND escuela = ?)",
+                        arrayOf<Any>(c.nombre, c.escuela, c.nombre, c.escuela)
+                    )
+                }
+                db.setTransactionSuccessful()
+            } finally {
+                db.endTransaction()
+            }
+        }
+
         fun obtenerInstancia(context: Context, scope: CoroutineScope): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -84,95 +122,11 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "captadores_db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .addCallback(object : RoomDatabase.Callback() {
-                        override fun onCreate(db: SupportSQLiteDatabase) {
-                            super.onCreate(db)
-                            INSTANCE?.let { database ->
-                                scope.launch(Dispatchers.IO) {
-                                    val carreras = listOf(
-                                        // Escuela de Administración y Negocios
-                                        CarreraEntity(nombre = "Auditoría", escuela = "Escuela de Administración y Negocios"),
-                                        CarreraEntity(nombre = "Ingeniería en Administración Mención Finanzas", escuela = "Escuela de Administración y Negocios"),
-                                        CarreraEntity(nombre = "Ingeniería en Administración Mención Gestión de Personas", escuela = "Escuela de Administración y Negocios"),
-                                        CarreraEntity(nombre = "Ingeniería en Administración Mención Innovación y Emprendimiento", escuela = "Escuela de Administración y Negocios"),
-                                        CarreraEntity(nombre = "Ingeniería en Comercio Exterior", escuela = "Escuela de Administración y Negocios"),
-                                        CarreraEntity(nombre = "Ingeniería en Gestión Logística", escuela = "Escuela de Administración y Negocios"),
-                                        CarreraEntity(nombre = "Ingeniería en Marketing Digital", escuela = "Escuela de Administración y Negocios"),
-                                        CarreraEntity(nombre = "Comercio Exterior", escuela = "Escuela de Administración y Negocios"),
-                                        CarreraEntity(nombre = "Contabilidad General Mención Legislación Tributaria", escuela = "Escuela de Administración y Negocios"),
-                                        CarreraEntity(nombre = "Técnico en Administración", escuela = "Escuela de Administración y Negocios"),
-                                        CarreraEntity(nombre = "Técnico en Gestión Logística", escuela = "Escuela de Administración y Negocios"),
-
-                                        // Escuela de Comunicación
-                                        CarreraEntity(nombre = "Animación Digital", escuela = "Escuela de Comunicación"),
-                                        CarreraEntity(nombre = "Comunicación Audiovisual", escuela = "Escuela de Comunicación"),
-                                        CarreraEntity(nombre = "Ingeniería en Sonido", escuela = "Escuela de Comunicación"),
-                                        CarreraEntity(nombre = "Publicidad", escuela = "Escuela de Comunicación"),
-                                        CarreraEntity(nombre = "Relaciones Públicas y Comunicación Organizacional", escuela = "Escuela de Comunicación"),
-                                        CarreraEntity(nombre = "Técnico Audiovisual", escuela = "Escuela de Comunicación"),
-                                        CarreraEntity(nombre = "Tecnología en Sonido e Iluminación", escuela = "Escuela de Comunicación"),
-
-                                        // Escuela de Construcción
-                                        CarreraEntity(nombre = "Ingeniería en Construcción", escuela = "Escuela de Construcción"),
-                                        CarreraEntity(nombre = "Ingeniería en Prevención de Riesgos", escuela = "Escuela de Construcción"),
-                                        CarreraEntity(nombre = "Técnico Modelador Proyectista", escuela = "Escuela de Construcción"),
-                                        CarreraEntity(nombre = "Restauración de Bienes Patrimoniales", escuela = "Escuela de Construcción"),
-                                        CarreraEntity(nombre = "Técnico en Construcción", escuela = "Escuela de Construcción"),
-                                        CarreraEntity(nombre = "Técnico en Prevención de Riesgos", escuela = "Escuela de Construcción"),
-                                        CarreraEntity(nombre = "Técnico Topógrafo Geomático", escuela = "Escuela de Construcción"),
-
-                                        // Escuela de Diseño
-                                        CarreraEntity(nombre = "Diseño de Ambientes", escuela = "Escuela de Diseño"),
-                                        CarreraEntity(nombre = "Diseño de Vestuario", escuela = "Escuela de Diseño"),
-                                        CarreraEntity(nombre = "Diseño Gráfico", escuela = "Escuela de Diseño"),
-                                        CarreraEntity(nombre = "Diseño Industrial e Innovación en Productos", escuela = "Escuela de Diseño"),
-                                        CarreraEntity(nombre = "Ilustración para Contextos Globales", escuela = "Escuela de Diseño"),
-
-                                        // Escuela de Gastronomía
-                                        CarreraEntity(nombre = "Gastronomía Internacional", escuela = "Escuela de Gastronomía"),
-                                        CarreraEntity(nombre = "Gastronomía", escuela = "Escuela de Gastronomía"),
-
-                                        // Escuela de Informática y Telecomunicaciones
-                                        CarreraEntity(nombre = "Ingeniería en Informática", escuela = "Escuela de Informática y Telecomunicaciones"),
-                                        CarreraEntity(nombre = "Ingeniería en Infraestructura Tecnológica", escuela = "Escuela de Informática y Telecomunicaciones"),
-                                        CarreraEntity(nombre = "Ingeniería en Redes y Telecomunicaciones", escuela = "Escuela de Informática y Telecomunicaciones"),
-                                        CarreraEntity(nombre = "Analista Programador", escuela = "Escuela de Informática y Telecomunicaciones"),
-                                        CarreraEntity(nombre = "Técnico en Redes y Telecomunicaciones", escuela = "Escuela de Informática y Telecomunicaciones"),
-
-                                        // Escuela de Salud y Bienestar
-                                        CarreraEntity(nombre = "Informática Biomédica", escuela = "Escuela de Salud y Bienestar"),
-                                        CarreraEntity(nombre = "Preparador Físico", escuela = "Escuela de Salud y Bienestar"),
-                                        CarreraEntity(nombre = "Técnico de Enfermería", escuela = "Escuela de Salud y Bienestar"),
-                                        CarreraEntity(nombre = "Técnico en Laboratorio Clínico, Banco de Sangre e Imagenología", escuela = "Escuela de Salud y Bienestar"),
-                                        CarreraEntity(nombre = "Técnico en Odontología", escuela = "Escuela de Salud y Bienestar"),
-                                        CarreraEntity(nombre = "Técnico en Química y Farmacia", escuela = "Escuela de Salud y Bienestar"),
-
-                                        // Escuela de Ingeniería y Recursos Naturales
-                                        CarreraEntity(nombre = "Ingeniería Agrícola", escuela = "Escuela de Ingeniería y Recursos Naturales"),
-                                        CarreraEntity(nombre = "Ingeniería en Electricidad y Automatización Industrial", escuela = "Escuela de Ingeniería y Recursos Naturales"),
-                                        CarreraEntity(nombre = "Ingeniería en Mantenimiento Industrial", escuela = "Escuela de Ingeniería y Recursos Naturales"),
-                                        CarreraEntity(nombre = "Ingeniería en Maquinaria y Vehículos Pesados", escuela = "Escuela de Ingeniería y Recursos Naturales"),
-                                        CarreraEntity(nombre = "Ingeniería en Mecánica Automotriz y Autotrónica", escuela = "Escuela de Ingeniería y Recursos Naturales"),
-                                        CarreraEntity(nombre = "Ingeniería en Recursos Naturales y Sostenibilidad", escuela = "Escuela de Ingeniería y Recursos Naturales"),
-                                        CarreraEntity(nombre = "Técnico en Calidad de Alimentos", escuela = "Escuela de Ingeniería y Recursos Naturales"),
-                                        CarreraEntity(nombre = "Técnico en Desabolladura y Pintura Automotriz", escuela = "Escuela de Ingeniería y Recursos Naturales"),
-                                        CarreraEntity(nombre = "Técnico en Electricidad y Automatización Industrial", escuela = "Escuela de Ingeniería y Recursos Naturales"),
-                                        CarreraEntity(nombre = "Técnico en Electricidad y Energías Renovables", escuela = "Escuela de Ingeniería y Recursos Naturales"),
-                                        CarreraEntity(nombre = "Técnico en Geología", escuela = "Escuela de Ingeniería y Recursos Naturales"),
-                                        CarreraEntity(nombre = "Técnico en Mantenimiento Industrial", escuela = "Escuela de Ingeniería y Recursos Naturales"),
-                                        CarreraEntity(nombre = "Técnico en Maquinaria y Vehículos Pesados", escuela = "Escuela de Ingeniería y Recursos Naturales"),
-                                        CarreraEntity(nombre = "Técnico en Mecánica Automotriz y Autotrónica", escuela = "Escuela de Ingeniería y Recursos Naturales"),
-                                        CarreraEntity(nombre = "Técnico en Operación y Supervisión de Procesos Mineros", escuela = "Escuela de Ingeniería y Recursos Naturales"),
-                                        CarreraEntity(nombre = "Técnico Veterinario y Pecuario", escuela = "Escuela de Ingeniería y Recursos Naturales"),
-
-                                        // Escuela de Turismo y Hospitalidad
-                                        CarreraEntity(nombre = "Administración en Turismo y Hospitalidad", escuela = "Escuela de Turismo y Hospitalidad"),
-                                        CarreraEntity(nombre = "Técnico en Turismo y Hospitalidad", escuela = "Escuela de Turismo y Hospitalidad")
-                                    )
-                                    database.carreraDao().insertarCarreras(carreras)
-                                }
-                            }
+                        override fun onOpen(db: SupportSQLiteDatabase) {
+                            super.onOpen(db)
+                            sembrarCarrerasFaltantes(db)
                         }
                     })
                     .build()
