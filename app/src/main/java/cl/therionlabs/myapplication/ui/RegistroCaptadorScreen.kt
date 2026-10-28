@@ -1,18 +1,23 @@
 package cl.therionlabs.myapplication.ui
 
-import android.util.Patterns
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,22 +29,36 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import cl.therionlabs.myapplication.viewmodels.RegisterUiState
+import cl.therionlabs.myapplication.viewmodels.RegisterUserViewModel
 
-// Solo cambia el aspecto (según el boceto). La lógica de validación es la misma de antes.
-// La barra superior con la flecha y el título "Registro de captador" la pone MainActivity.
-// OJO: lo que falta (enviar la solicitud al servidor) es del Diego,Jose.
 @Composable
 fun RegistroCaptadorScreen(
-    onVolverLogin: () -> Unit = {}
+    onVolverLogin: () -> Unit = {},
+    viewModel: RegisterUserViewModel = viewModel() // 👈 ViewModel inyectado
 ) {
     var nombre by remember { mutableStateOf("") }
     var rut by remember { mutableStateOf("") }
     var correo by remember { mutableStateOf("") }
     var telefono by remember { mutableStateOf("") }
     var contrasena by remember { mutableStateOf("") }
+    var confirmarContrasena by remember { mutableStateOf("") }
 
-    var mensaje by remember { mutableStateOf("") }
-    var registroValido by remember { mutableStateOf(false) }
+
+    val uiState by viewModel.uiState.collectAsState()
+
+
+    LaunchedEffect(uiState) {
+        when (uiState) {
+            is RegisterUiState.Success -> {
+
+                onVolverLogin()
+                viewModel.resetearEstado()
+            }
+            else -> {}
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -65,7 +84,7 @@ fun RegistroCaptadorScreen(
             valor = nombre,
             onCambio = {
                 nombre = it
-                mensaje = ""
+                if (uiState is RegisterUiState.Error) viewModel.resetearEstado()
             },
             placeholder = "Nombre y apellidos"
         )
@@ -74,7 +93,7 @@ fun RegistroCaptadorScreen(
             valor = rut,
             onCambio = {
                 rut = it
-                mensaje = ""
+                if (uiState is RegisterUiState.Error) viewModel.resetearEstado()
             },
             placeholder = "12.345.678-9"
         )
@@ -83,7 +102,7 @@ fun RegistroCaptadorScreen(
             valor = correo,
             onCambio = {
                 correo = it
-                mensaje = ""
+                if (uiState is RegisterUiState.Error) viewModel.resetearEstado()
             },
             placeholder = "nombre@correo.cl",
             teclado = KeyboardType.Email
@@ -93,7 +112,7 @@ fun RegistroCaptadorScreen(
             valor = telefono,
             onCambio = {
                 telefono = it
-                mensaje = ""
+                if (uiState is RegisterUiState.Error) viewModel.resetearEstado()
             },
             placeholder = "+56 9 1234 5678",
             teclado = KeyboardType.Phone
@@ -103,52 +122,46 @@ fun RegistroCaptadorScreen(
             valor = contrasena,
             onCambio = {
                 contrasena = it
-                mensaje = ""
+                if (uiState is RegisterUiState.Error) viewModel.resetearEstado()
             },
-            placeholder = "Mínimo 8 caracteres",
+            placeholder = "Mínimo 6 caracteres",
+            imeAction = ImeAction.Next
+        )
+        DuocPasswordField(
+            etiqueta = "Confirmar Contraseña",
+            valor = confirmarContrasena,
+            onCambio = {
+                confirmarContrasena = it
+                if (uiState is RegisterUiState.Error) viewModel.resetearEstado()
+            },
+            placeholder = "Repite tu contraseña",
             imeAction = ImeAction.Done
         )
 
-        DuocBannerInfo("Tu solicitud será revisada por un administrador antes de activar la cuenta.")
+        DuocBannerInfo("Tu solicitud creará inmediatamente tu cuenta de acceso a la plataforma.")
 
-        DuocBotonAmarillo(
-            texto = "Solicitar registro",
-            onClick = {
-                mensaje = when {
-                    nombre.isBlank() ||
-                            rut.isBlank() ||
-                            correo.isBlank() ||
-                            telefono.isBlank() ||
-                            contrasena.isBlank() ->
-                        "Completa todos los campos."
 
-                    !Patterns.EMAIL_ADDRESS
-                        .matcher(correo.trim())
-                        .matches() ->
-                        "Ingresa un correo electrónico válido."
-
-                    contrasena.length < 8 ->
-                        "La contraseña debe tener al menos 8 caracteres."
-
-                    else -> ""
-                }
-
-                registroValido = mensaje.isEmpty()
-
-                if (registroValido) {
-                    mensaje = "Datos validados. Falta enviar la solicitud al servidor."
-                }
-            }
-        )
-
-        if (mensaje.isNotEmpty()) {
+        if (uiState is RegisterUiState.Error) {
             Text(
-                text = mensaje,
-                color = if (registroValido) DuocNavy else DuocError,
+                text = (uiState as RegisterUiState.Error).mensaje,
+                color = MaterialTheme.colorScheme.error,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
             )
         }
+
+
+        DuocBotonAmarillo(
+            texto = if (uiState is RegisterUiState.Loading) "Registrando..." else "Solicitar registro",
+            onClick = {
+                // Llama al método del ViewModel para validar e interactuar con Firebase
+                viewModel.registrarCaptador(
+                    correo = correo,
+                    clave = contrasena,
+                    confirmarClave = confirmarContrasena
+                )
+            }
+        )
 
         Row(
             modifier = Modifier.fillMaxWidth(),
