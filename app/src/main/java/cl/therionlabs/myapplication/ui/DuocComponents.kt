@@ -42,9 +42,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -273,11 +275,22 @@ fun DuocField(
 ) {
     val foco = LocalFocusManager.current
 
+    var interno by remember { mutableStateOf(TextFieldValue(valor, TextRange(valor.length))) }
+
+    val mostrado = if (interno.text == valor) {
+        interno
+    } else {
+        interno.copy(text = valor, selection = TextRange(valor.length))
+    }
+
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(etiqueta, color = DuocNavy, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         OutlinedTextField(
-            value = valor,
-            onValueChange = onCambio,
+            value = mostrado,
+            onValueChange = { nuevo ->
+                interno = nuevo
+                onCambio(nuevo.text)
+            },
             placeholder = { Text(placeholder) },
             isError = error != null,
             singleLine = true,

@@ -180,11 +180,11 @@ fun GuardadoScreen(mainViewModel: MainViewModel) {
                 onClick = { mainViewModel.popBackStack() }
             )
             Spacer(Modifier.height(12.dp))
-            // Todavía no existe el panel del boceto (pág. 4): por ahora vuelve al escáner
+            // Vuelve al panel principal quitando de la pila las pantallas del registro
             DuocBotonContorno(
                 texto = "Volver al panel",
                 color = DuocAzulAcento,
-                onClick = { mainViewModel.popTo(Screen.Scan) }
+                onClick = { mainViewModel.popTo(Screen.Dashboard) }
             )
         }
     }
