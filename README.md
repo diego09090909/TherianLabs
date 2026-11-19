@@ -71,18 +71,19 @@ flowchart LR
 
 ```
 TherianLabs/
-├── app/                  # App Android (Kotlin + Compose)
-├── gradle/               # Configuración de Gradle de la app
-├── backend/              # Microservicios Spring Boot (independientes de la app)
+├── app-movil/            # Proyecto Android completo (Kotlin + Compose)
+│   ├── app/
+│   ├── gradle/
+│   ├── build.gradle.kts
+│   └── settings.gradle.kts
+├── backend/              # Microservicios Spring Boot
 │   ├── ms-eventos/       # Eventos y códigos QR
 │   ├── ms-prospectos/    # Prospectos (CRUD)
 │   └── ms-captadores/    # Captadores
-├── build.gradle.kts
-├── settings.gradle.kts
 └── README.md
 ```
 
-La carpeta `backend/` no forma parte del build de Android: se abre por separado en el IDE de Java.
+Las dos carpetas son independientes: `app-movil/` se abre con Android Studio y cada microservicio de `backend/` se abre por separado en el IDE de Java.
 
 ---
 
@@ -101,7 +102,7 @@ Cada uno es un proyecto Maven propio (Java 17, Spring Boot 3.4) con arquitectura
 ## ▶️ Cómo ejecutar
 
 ### App Android
-1. Abrir la raíz del repositorio con **Android Studio**.
+1. Abrir la carpeta **`app-movil/`** con **Android Studio**.
 2. Sincronizar Gradle y ejecutar en un emulador o dispositivo (minSdk 24).
 3. En el emulador, los microservicios locales se alcanzan en `http://10.0.2.2:<puerto>/`.
 
@@ -122,4 +123,4 @@ Usuario y clave de MySQL por defecto: `root` / `root` (se cambian con las variab
 - La rama `master` es la versión estable: no se trabaja directo en ella.
 - Cada cambio va en una rama (`feat/...`, `fix/...`) y entra por Pull Request.
 - Mensajes de commit claros y en presente: `feat: agrega CRUD de prospectos`.
-- Los cambios de `backend/` y de `app/` se commitean por separado para no mezclar la app con los servicios.
+- Los cambios de `backend/` y de `app-movil/` se commitean por separado para no mezclar la app con los servicios.
