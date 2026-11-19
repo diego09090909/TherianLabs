@@ -13,3 +13,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Backend (Maven / Java)
+target/
+*.iml
+.vscode/
