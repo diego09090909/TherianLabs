@@ -27,13 +27,18 @@ import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -44,18 +49,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cl.therionlabs.myapplication.sync.SyncScheduler
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.therionlabs.myapplication.viewmodels.DashboardUiState
 import cl.therionlabs.myapplication.viewmodels.EventoResumen
+import cl.therionlabs.myapplication.viewmodels.RegistroViewModel
 
 @Composable
-fun EventosTab(estado: DashboardUiState, onEscanear: () -> Unit) {
-    val context = LocalContext.current
+fun EventosTab(
+    estado: DashboardUiState,
+    onEscanear: () -> Unit,
+    viewModel: RegistroViewModel = viewModel()
+) {
+    val sincronizando by viewModel.sincronizando.collectAsState()
+    val snackbar = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        viewModel.mensajes.collect { snackbar.showSnackbar(it) }
+    }
     var consulta by rememberSaveable { mutableStateOf("") }
     var filtro by rememberSaveable { mutableIntStateOf(0) } // 0 todos, 1 pendientes, 2 sincronizados
 
@@ -74,79 +88,97 @@ fun EventosTab(estado: DashboardUiState, onEscanear: () -> Unit) {
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Eventos", color = DuocNavy, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            OutlinedButton(
-                onClick = { SyncScheduler.programarAhora(context) },
-                shape = RoundedCornerShape(20.dp),
-                border = BorderStroke(1.5.dp, DuocNavy),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = DuocNavy)
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("Sincronizar", fontWeight = FontWeight.SemiBold)
+                Text("Eventos", color = DuocNavy, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                OutlinedButton(
+                    onClick = { viewModel.sincronizarAhora() },
+                    enabled = !sincronizando,
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.5.dp, DuocNavy),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = DuocNavy,
+                        disabledContentColor = DuocNavy
+                    )
+                ) {
+                    if (sincronizando) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = DuocNavy
+                        )
+                    } else {
+                        Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
+                    }
+                    Spacer(Modifier.width(6.dp))
+                    Text("Sincronizar", fontWeight = FontWeight.SemiBold)
+                }
             }
-        }
 
-        OutlinedTextField(
-            value = consulta,
-            onValueChange = { consulta = it },
-            placeholder = { Text("Buscar evento o colegio...") },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-            singleLine = true,
-            shape = RoundedCornerShape(14.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White,
-                focusedBorderColor = DuocNavy,
-                unfocusedBorderColor = DuocBordeCampo,
-                focusedTextColor = DuocNavy,
-                unfocusedTextColor = DuocNavy,
-                cursorColor = DuocNavy,
-                focusedPlaceholderColor = DuocPlaceholder,
-                unfocusedPlaceholderColor = DuocPlaceholder,
-                focusedLeadingIconColor = DuocGris,
-                unfocusedLeadingIconColor = DuocGris
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-        )
-
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            listOf("Todos", "Pendientes", "Sincronizados").forEachIndexed { i, texto ->
-                ChipFiltro(texto, seleccionado = filtro == i) { filtro = i }
-            }
-        }
-
-        if (estado.porEnviar > 0) {
-            DuocBannerInfo(
-                texto = "${estado.porEnviar} registros esperan para enviarse al servidor.",
-                modifier = Modifier.padding(horizontal = 16.dp)
+            OutlinedTextField(
+                value = consulta,
+                onValueChange = { consulta = it },
+                placeholder = { Text("Buscar evento o colegio...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedBorderColor = DuocNavy,
+                    unfocusedBorderColor = DuocBordeCampo,
+                    focusedTextColor = DuocNavy,
+                    unfocusedTextColor = DuocNavy,
+                    cursorColor = DuocNavy,
+                    focusedPlaceholderColor = DuocPlaceholder,
+                    unfocusedPlaceholderColor = DuocPlaceholder,
+                    focusedLeadingIconColor = DuocGris,
+                    unfocusedLeadingIconColor = DuocGris
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
             )
-        }
 
-        if (estado.eventos.isEmpty()) {
-            EstadoVacio(onEscanear)
-        } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 96.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(lista, key = { it.eventoId }) { TarjetaEventoHistorial(it) }
+                listOf("Todos", "Pendientes", "Sincronizados").forEachIndexed { i, texto ->
+                    ChipFiltro(texto, seleccionado = filtro == i) { filtro = i }
+                }
+            }
+
+            if (estado.porEnviar > 0) {
+                DuocBannerInfo(
+                    texto = "${estado.porEnviar} registros esperan para enviarse al servidor.",
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+
+            if (estado.eventos.isEmpty()) {
+                EstadoVacio(onEscanear)
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 96.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(lista, key = { it.eventoId }) { TarjetaEventoHistorial(it) }
+                }
             }
         }
+        SnackbarHost(
+            hostState = snackbar,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp)
+        )
     }
 }
 
