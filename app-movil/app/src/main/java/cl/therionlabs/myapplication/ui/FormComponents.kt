@@ -45,12 +45,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.style.TextDecoration
 
-// Componentes propios del formulario del cupón de admisión.
-// Usan la misma paleta de DuocComponents.kt.
-
-// ---------------------------------------------------------------------------
-// Encabezado de sección, como las franjas del cupón: "DATOS PERSONALES"
-// ---------------------------------------------------------------------------
 @Composable
 fun DuocSeccion(normal: String, destacado: String, modifier: Modifier = Modifier) {
     Row(
@@ -71,9 +65,7 @@ fun DuocSeccion(normal: String, destacado: String, modifier: Modifier = Modifier
     }
 }
 
-// ---------------------------------------------------------------------------
-// Elegir UNA opción (sexo, actividad, jornada, nivel de interés, afirmación)
-// ---------------------------------------------------------------------------
+
 @Composable
 fun DuocOpcionUnica(
     etiqueta: String,
@@ -146,9 +138,6 @@ private fun ChipOpcion(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Casilla para elegir VARIAS opciones (sedes)
-// ---------------------------------------------------------------------------
 @Composable
 fun DuocCasilla(
     texto: String,
@@ -189,14 +178,8 @@ fun DuocCasilla(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Bloque de autorización de datos, igual al del cupón (fondo oscuro)
-// ---------------------------------------------------------------------------
 private val ConsentFondo = Color(0xFF151515)
 private val ConsentFranja = Color(0xFF2C2C2C)
-// ---------------------------------------------------------------------------
-// Autorización de datos: tarjeta clara, en el mismo estilo del resto del formulario
-// ---------------------------------------------------------------------------
 private const val URL_CONSENTIMIENTO = "https://www.duoc.cl/consentimiento-informado"
 
 @Composable
@@ -228,7 +211,6 @@ fun DuocBloqueConsentimiento(
             lineHeight = 19.sp
         )
 
-        // Enlace al Consentimiento Informado
         Text(
             text = buildAnnotatedString {
                 append("Más información en ")
@@ -251,7 +233,6 @@ fun DuocBloqueConsentimiento(
             }
         )
 
-        // Opción "Sí, autorizo": se ve igual que los chips del formulario
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -294,19 +275,11 @@ fun DuocBloqueConsentimiento(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Carreras
-// ---------------------------------------------------------------------------
-
-// Nombre con el que se guarda y se muestra la carrera. Las de Duoc Online llevan la marca
-// porque algunas se llaman igual que las presenciales (por ejemplo "Ingeniería en Prevención de Riesgos").
 fun CarreraEntity.tituloSeleccion(): String =
     if (escuela == "Duoc Online") "$nombre (Duoc Online)" else nombre
 
-// Opción de la lista del buscador de carreras
 data class OpcionBusqueda(val titulo: String, val detalle: String = "")
 
-// Campo con búsqueda: escribes y aparecen las coincidencias debajo para elegir una.
 @Composable
 fun DuocBuscador(
     etiqueta: String,
@@ -321,15 +294,16 @@ fun DuocBuscador(
     var enFoco by remember { mutableStateOf(false) }
     var escribiendo by remember { mutableStateOf(false) }
 
-    // Sincroniza el texto cuando la selección cambia desde afuera (por ejemplo, al limpiar el formulario)
     LaunchedEffect(seleccionado) {
         if (seleccionado.isNotEmpty()) texto = seleccionado
         else if (!escribiendo) texto = ""
     }
 
     val filtradas = remember(texto, opciones) {
-        val q = texto.trim()
-        opciones.filter { q.isEmpty() || it.titulo.contains(q, ignoreCase = true) }.take(6)
+        val q = texto.trim().sinTildes()
+        opciones.filter { q.isEmpty() || it.titulo.sinTildes().contains(q) }
+            .sortedBy { !it.titulo.sinTildes().startsWith(q) }
+            .take(6)
     }
     val mostrarLista = enFoco && texto != seleccionado && filtradas.isNotEmpty()
 
@@ -386,3 +360,8 @@ fun DuocBuscador(
         }
     }
 }
+
+private fun String.sinTildes(): String =
+    java.text.Normalizer.normalize(this, java.text.Normalizer.Form.NFD)
+        .replace(Regex("\\p{Mn}+"), "")
+        .lowercase()

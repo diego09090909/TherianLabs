@@ -108,13 +108,13 @@ fun RegistroCaptadorScreen(
             teclado = KeyboardType.Email
         )
         DuocField(
-            etiqueta = "Teléfono",
+            etiqueta = "Celular (+56)",
             valor = telefono,
             onCambio = {
                 telefono = it
                 if (uiState is RegisterUiState.Error) viewModel.resetearEstado()
             },
-            placeholder = "+56 9 1234 5678",
+            placeholder = "9XXXXXXXX",
             teclado = KeyboardType.Phone
         )
         DuocPasswordField(
