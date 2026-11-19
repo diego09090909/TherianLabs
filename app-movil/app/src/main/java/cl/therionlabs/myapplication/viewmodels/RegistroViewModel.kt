@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+const val PASOS_FORMULARIO = 7
+
 private const val MSG_RUT_INVALIDO = "El RUT no es válido. Revisa el dígito verificador."
 private const val MSG_FECHA_INVALIDA = "Fecha no válida. Usa el formato dd-mm-aaaa."
 private const val MSG_CORREO_INVALIDO = "Ingresa un correo válido, por ejemplo nombre@correo.cl."
@@ -217,9 +219,8 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
         _estado.update { it.copy(aceptaTerminos = valor, errores = it.errores.copy(aceptaTerminos = null)) }
     }
 
-    fun validar(): Boolean {
-        val a = estado.value
-        val errores = RegistroErrores(
+    private fun calcularErrores(a: RegistroUiState): RegistroErrores {
+        return RegistroErrores(
             rut = when {
                 a.rut.isBlank() -> "El RUT es obligatorio"
                 !Validadores.rutValido(a.rut) -> MSG_RUT_INVALIDO
@@ -232,7 +233,7 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
                 !Validadores.fechaNacimientoValida(a.fechaNacimiento) -> MSG_FECHA_INVALIDA
                 else -> null
             },
-            comunaResidencia = if (a.comunaResidencia.isBlank()) "Indica la comuna donde vive" else null,
+            comunaResidencia = if (a.comunaResidencia.isBlank()) "Elige tu comuna de la lista" else null,
             telefono = when {
                 a.telefono.isBlank() -> "El celular es obligatorio"
                 !Validadores.telefonoValido(a.telefono) -> "Use formato 9XXXXXXXX"
@@ -255,9 +256,38 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
             carrera3 = if (a.carrera3.isBlank()) "Elige tu 3ª opción de carrera" else null,
             aceptaTerminos = if (!a.aceptaTerminos) "El alumno debe marcar \"Sí, autorizo\" para poder guardar" else null
         )
+    }
 
+    fun validar(): Boolean {
+        val errores = calcularErrores(estado.value)
         _estado.update { it.copy(errores = errores) }
         return errores.cantidad() == 0
+    }
+
+    private fun erroresDelPaso(e: RegistroErrores, paso: Int): RegistroErrores = when (paso) {
+        0 -> RegistroErrores(rut = e.rut, nombre = e.nombre, apellidos = e.apellidos)
+        1 -> RegistroErrores(fechaNacimiento = e.fechaNacimiento, comunaResidencia = e.comunaResidencia)
+        2 -> RegistroErrores(telefono = e.telefono, correo = e.correo)
+        3 -> RegistroErrores(
+            actividad = e.actividad, actividadOtra = e.actividadOtra,
+            colegio = e.colegio, jornada = e.jornada
+        )
+        4 -> RegistroErrores()
+        5 -> RegistroErrores(
+            sedes = e.sedes, carrera1 = e.carrera1, carrera2 = e.carrera2, carrera3 = e.carrera3
+        )
+        else -> RegistroErrores(aceptaTerminos = e.aceptaTerminos)
+    }
+
+    fun validarPaso(paso: Int): Boolean {
+        val delPaso = erroresDelPaso(calcularErrores(estado.value), paso)
+        _estado.update { it.copy(errores = delPaso) }
+        return delPaso.cantidad() == 0
+    }
+
+    fun primerPasoInvalido(): Int? {
+        val todos = calcularErrores(estado.value)
+        return (0 until PASOS_FORMULARIO).firstOrNull { erroresDelPaso(todos, it).cantidad() > 0 }
     }
 
     // Guarda SIEMPRE en Room primero. La subida a la API la hace WorkManager cuando hay red.
