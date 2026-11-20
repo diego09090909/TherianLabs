@@ -7,9 +7,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 @Entity
 @Table(name = "prospecto",
@@ -19,31 +16,18 @@ public class Prospecto {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @NotBlank
     @Column(name = "evento_id")
     private String eventoId;
 
     private String captadorId;
-
-    @NotBlank
     private String rut;
-
-    @NotBlank
     private String nombres;
-
-    @NotBlank
     private String apellidos;
 
     private String sexo;
     private String fechaNacimiento;
     private String comunaResidencia;
-
-    @NotBlank
     private String celular;
-
-    @NotBlank
-    @Email
     private String email;
 
     private String actividad;
@@ -54,16 +38,12 @@ public class Prospecto {
     private String sedes;
     private String nivelInteres;
     private String afirmacion;
-
-    @NotBlank
     private String carrera1;
 
     private String carrera2;
     private String carrera3;
 
     private Boolean autorizaContacto = false;
-
-    @NotNull
     private Long fechaCaptura;
 
     public Prospecto() {

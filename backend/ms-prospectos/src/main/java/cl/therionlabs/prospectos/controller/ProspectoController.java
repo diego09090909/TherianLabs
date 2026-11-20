@@ -1,7 +1,8 @@
 package cl.therionlabs.prospectos.controller;
 
+import cl.therionlabs.prospectos.dto.ProspectoRequest;
+import cl.therionlabs.prospectos.dto.ProspectoResponse;
 import cl.therionlabs.prospectos.dto.RespuestaLote;
-import cl.therionlabs.prospectos.model.Prospecto;
 import cl.therionlabs.prospectos.service.ProspectoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -29,29 +30,29 @@ public class ProspectoController {
     }
 
     @GetMapping
-    public List<Prospecto> listar(@RequestParam(required = false) String eventoId) {
+    public List<ProspectoResponse> listar(@RequestParam(required = false) String eventoId) {
         return service.listar(eventoId);
     }
 
     @GetMapping("/{id}")
-    public Prospecto obtener(@PathVariable Long id) {
+    public ProspectoResponse obtener(@PathVariable Long id) {
         return service.obtener(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Prospecto crear(@Valid @RequestBody Prospecto prospecto) {
-        return service.crear(prospecto);
+    public ProspectoResponse crear(@Valid @RequestBody ProspectoRequest request) {
+        return service.crear(request);
     }
 
     @PostMapping("/lote")
-    public RespuestaLote lote(@RequestBody List<Prospecto> prospectos) {
+    public RespuestaLote lote(@RequestBody List<ProspectoRequest> prospectos) {
         return service.procesarLote(prospectos);
     }
 
     @PutMapping("/{id}")
-    public Prospecto actualizar(@PathVariable Long id, @Valid @RequestBody Prospecto prospecto) {
-        return service.actualizar(id, prospecto);
+    public ProspectoResponse actualizar(@PathVariable Long id, @Valid @RequestBody ProspectoRequest request) {
+        return service.actualizar(id, request);
     }
 
     @DeleteMapping("/{id}")

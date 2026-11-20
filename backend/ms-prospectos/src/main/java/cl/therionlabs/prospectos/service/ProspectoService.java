@@ -1,17 +1,20 @@
 package cl.therionlabs.prospectos.service;
 
 import cl.therionlabs.prospectos.dto.EstadoResultado;
+import cl.therionlabs.prospectos.dto.ProspectoRequest;
+import cl.therionlabs.prospectos.dto.ProspectoResponse;
 import cl.therionlabs.prospectos.dto.RespuestaLote;
 import cl.therionlabs.prospectos.dto.ResultadoProspecto;
+import cl.therionlabs.prospectos.exception.ConflictoException;
+import cl.therionlabs.prospectos.exception.RecursoNoEncontradoException;
+import cl.therionlabs.prospectos.exception.SolicitudInvalidaException;
+import cl.therionlabs.prospectos.mapper.ProspectoMapper;
 import cl.therionlabs.prospectos.model.Prospecto;
 import cl.therionlabs.prospectos.repository.ProspectoRepository;
-import cl.therionlabs.prospectos.util.RutValidator;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,49 +25,47 @@ import java.util.stream.Collectors;
 public class ProspectoService {
 
     static final int MAX_LOTE = 500;
+    private static final String MSG_DUPLICADO = "Ese RUT ya esta registrado en el evento";
 
     private final ProspectoRepository repository;
+    private final ProspectoMapper mapper;
     private final Validator validator;
 
-    public ProspectoService(ProspectoRepository repository, Validator validator) {
+    public ProspectoService(ProspectoRepository repository, ProspectoMapper mapper, Validator validator) {
         this.repository = repository;
+        this.mapper = mapper;
         this.validator = validator;
     }
 
-    public List<Prospecto> listar(String eventoId) {
-        if (eventoId != null && !eventoId.isBlank()) {
-            return repository.findByEventoId(eventoId);
-        }
-        return repository.findAll();
+    public List<ProspectoResponse> listar(String eventoId) {
+        List<Prospecto> prospectos = (eventoId != null && !eventoId.isBlank())
+                ? repository.findByEventoId(eventoId)
+                : repository.findAll();
+        return prospectos.stream().map(mapper::aRespuesta).toList();
     }
 
-    public Prospecto obtener(Long id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Prospecto no encontrado"));
+    public ProspectoResponse obtener(Long id) {
+        return mapper.aRespuesta(buscar(id));
     }
 
-    public Prospecto crear(Prospecto prospecto) {
-        String error = revisar(prospecto);
-        if (error != null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, error);
-        }
+    public ProspectoResponse crear(ProspectoRequest request) {
+        Prospecto prospecto = mapper.aEntidad(request);
         if (repository.existsByEventoIdAndRut(prospecto.getEventoId(), prospecto.getRut())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ese RUT ya esta registrado en el evento");
+            throw new ConflictoException(MSG_DUPLICADO);
         }
-        prospecto.setId(null);
-        return repository.save(prospecto);
+        return mapper.aRespuesta(repository.save(prospecto));
     }
 
-    public RespuestaLote procesarLote(List<Prospecto> lote) {
+    public RespuestaLote procesarLote(List<ProspectoRequest> lote) {
         if (lote == null || lote.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El lote esta vacio");
+            throw new SolicitudInvalidaException("El lote esta vacio");
         }
         if (lote.size() > MAX_LOTE) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El lote no puede superar " + MAX_LOTE + " prospectos");
+            throw new SolicitudInvalidaException("El lote no puede superar " + MAX_LOTE + " prospectos");
         }
         List<ResultadoProspecto> resultados = new ArrayList<>();
-        for (Prospecto prospecto : lote) {
-            resultados.add(procesarUno(prospecto));
+        for (ProspectoRequest request : lote) {
+            resultados.add(procesarUno(request));
         }
         return new RespuestaLote(
                 resultados.size(),
@@ -75,47 +76,34 @@ public class ProspectoService {
         );
     }
 
-    public Prospecto actualizar(Long id, Prospecto datos) {
-        Prospecto actual = obtener(id);
-        actual.setNombres(datos.getNombres());
-        actual.setApellidos(datos.getApellidos());
-        actual.setSexo(datos.getSexo());
-        actual.setFechaNacimiento(datos.getFechaNacimiento());
-        actual.setComunaResidencia(datos.getComunaResidencia());
-        actual.setCelular(datos.getCelular());
-        actual.setEmail(datos.getEmail());
-        actual.setActividad(datos.getActividad());
-        actual.setActividadOtra(datos.getActividadOtra());
-        actual.setEstablecimiento(datos.getEstablecimiento());
-        actual.setComunaEstablecimiento(datos.getComunaEstablecimiento());
-        actual.setJornada(datos.getJornada());
-        actual.setSedes(datos.getSedes());
-        actual.setNivelInteres(datos.getNivelInteres());
-        actual.setAfirmacion(datos.getAfirmacion());
-        actual.setCarrera1(datos.getCarrera1());
-        actual.setCarrera2(datos.getCarrera2());
-        actual.setCarrera3(datos.getCarrera3());
-        actual.setAutorizaContacto(datos.getAutorizaContacto());
-        return repository.save(actual);
+    public ProspectoResponse actualizar(Long id, ProspectoRequest request) {
+        Prospecto actual = buscar(id);
+        mapper.actualizar(actual, request);
+        return mapper.aRespuesta(repository.save(actual));
     }
 
     public void eliminar(Long id) {
-        obtener(id);
+        buscar(id);
         repository.deleteById(id);
     }
 
-    private ResultadoProspecto procesarUno(Prospecto prospecto) {
-        if (prospecto == null) {
+    private Prospecto buscar(Long id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Prospecto no encontrado"));
+    }
+
+    private ResultadoProspecto procesarUno(ProspectoRequest request) {
+        if (request == null) {
             return new ResultadoProspecto(null, null, EstadoResultado.INVALIDO, "Prospecto vacio", null);
         }
-        String error = revisar(prospecto);
+        String error = revisar(request);
         if (error != null) {
-            return new ResultadoProspecto(prospecto.getEventoId(), prospecto.getRut(), EstadoResultado.INVALIDO, error, null);
+            return new ResultadoProspecto(request.eventoId(), request.rut(), EstadoResultado.INVALIDO, error, null);
         }
+        Prospecto prospecto = mapper.aEntidad(request);
         if (repository.existsByEventoIdAndRut(prospecto.getEventoId(), prospecto.getRut())) {
             return duplicado(prospecto);
         }
-        prospecto.setId(null);
         try {
             Prospecto guardado = repository.save(prospecto);
             return new ResultadoProspecto(guardado.getEventoId(), guardado.getRut(), EstadoResultado.CREADO, null, guardado.getId());
@@ -125,23 +113,18 @@ public class ProspectoService {
     }
 
     private ResultadoProspecto duplicado(Prospecto prospecto) {
-        return new ResultadoProspecto(prospecto.getEventoId(), prospecto.getRut(), EstadoResultado.DUPLICADO,
-                "Ese RUT ya esta registrado en el evento", null);
+        return new ResultadoProspecto(prospecto.getEventoId(), prospecto.getRut(), EstadoResultado.DUPLICADO, MSG_DUPLICADO, null);
     }
 
-    private String revisar(Prospecto prospecto) {
-        Set<ConstraintViolation<Prospecto>> errores = validator.validate(prospecto);
-        if (!errores.isEmpty()) {
-            return errores.stream()
-                    .map(e -> e.getPropertyPath() + ": " + e.getMessage())
-                    .sorted()
-                    .collect(Collectors.joining("; "));
+    private String revisar(ProspectoRequest request) {
+        Set<ConstraintViolation<ProspectoRequest>> errores = validator.validate(request);
+        if (errores.isEmpty()) {
+            return null;
         }
-        prospecto.setRut(RutValidator.normalizar(prospecto.getRut()));
-        if (!RutValidator.esValido(prospecto.getRut())) {
-            return "RUT invalido";
-        }
-        return null;
+        return errores.stream()
+                .map(e -> e.getPropertyPath() + ": " + e.getMessage())
+                .sorted()
+                .collect(Collectors.joining("; "));
     }
 
     private int contar(List<ResultadoProspecto> resultados, EstadoResultado estado) {

@@ -29,6 +29,27 @@ El reporte de cobertura (JaCoCo) queda en `target/site/jacoco/index.html`.
 - `eventoId` y `captadorId` son texto (ej. `EVT-0042`).
 - `sedes` se guarda separadas por `|`.
 
+## Estructura
+
+`controller` → `service` → `repository` → `model`, más:
+
+- `dto`: `ProspectoRequest` (entrada, con validaciones), `ProspectoResponse` (salida) y los resultados de `/lote`.
+- `mapper`: convierte entre DTO y entidad (normaliza el RUT).
+- `validation`: anotación `@RutValido`.
+- `exception`: excepciones propias y `ManejadorErrores`, que responde todos los errores con el mismo JSON.
+
+## Formato de error
+
+```json
+{
+  "status": 400,
+  "error": "Bad Request",
+  "mensaje": "Hay campos invalidos",
+  "detalles": ["rut: no es un RUT valido"],
+  "fecha": "2026-11-20T20:00:00Z"
+}
+```
+
 ## Respuesta de `/lote`
 
 ```json
