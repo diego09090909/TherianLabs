@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -158,7 +159,7 @@ class ProspectoServiceTest {
             return p;
         });
 
-        RespuestaLote respuesta = service.procesarLote(List.of(nuevo, repetido, malo, null));
+        RespuestaLote respuesta = service.procesarLote(Arrays.asList(nuevo, repetido, malo, null));
 
         assertEquals(4, respuesta.recibidos());
         assertEquals(1, respuesta.creados());
