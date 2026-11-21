@@ -11,7 +11,7 @@ public class ProspectoMapper {
 
     public Prospecto aEntidad(ProspectoRequest request) {
         Prospecto prospecto = new Prospecto();
-        prospecto.setEventoId(request.eventoId());
+        prospecto.setEventoId(request.eventoId() == null ? null : request.eventoId().trim().toUpperCase());
         prospecto.setCaptadorId(request.captadorId());
         prospecto.setRut(RutValidator.normalizar(request.rut()));
         prospecto.setFechaCaptura(request.fechaCaptura());

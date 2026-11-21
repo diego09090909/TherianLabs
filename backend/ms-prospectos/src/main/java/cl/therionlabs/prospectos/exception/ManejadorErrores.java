@@ -29,6 +29,11 @@ public class ManejadorErrores {
         return construir(HttpStatus.BAD_REQUEST, e.getMessage(), List.of());
     }
 
+    @ExceptionHandler(ServicioNoDisponibleException.class)
+    public ResponseEntity<ErrorRespuesta> servicioNoDisponible(ServicioNoDisponibleException e) {
+        return construir(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage(), List.of());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorRespuesta> validacion(MethodArgumentNotValidException e) {
         List<String> detalles = e.getBindingResult().getFieldErrors().stream()
