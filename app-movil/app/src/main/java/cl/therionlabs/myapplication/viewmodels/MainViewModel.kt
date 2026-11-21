@@ -40,7 +40,7 @@ class MainViewModel : ViewModel() {
         val id = codigo.trim().uppercase()
         val sinRed = ResultadoEvento.SinConexion(EventosDemo.desdeCodigo(id))
         return try {
-            val respuesta = RetrofitClient.api.obtenerEvento(id)
+            val respuesta = RetrofitClient.eventos.obtenerEvento(id)
             val dto = respuesta.body()
             when {
                 respuesta.code() == 404 -> ResultadoEvento.NoExiste

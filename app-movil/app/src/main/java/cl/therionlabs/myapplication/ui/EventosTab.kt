@@ -239,6 +239,8 @@ private fun TarjetaEventoHistorial(e: EventoResumen) {
             }
             if (e.pendientes > 0) {
                 DuocPill("${e.pendientes} por enviar", DuocAmarilloPill, DuocAmarilloTexto)
+            } else if (e.rechazados > 0) {
+                DuocPill(if (e.rechazados == 1) "1 rechazado" else "${e.rechazados} rechazados", DuocErrorFondo, DuocErrorTexto)
             } else {
                 DuocPill("Al día", DuocVerdeSuave, DuocVerde)
             }

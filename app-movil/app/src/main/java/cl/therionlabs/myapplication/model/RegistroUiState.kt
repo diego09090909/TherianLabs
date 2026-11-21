@@ -79,9 +79,10 @@ object Catalogos {
     )
 
     const val ACTIVIDAD_OTRA = "Otra"
+    const val ACTIVIDAD_EGRESADO = "Egresado"
     val actividades = listOf(
         OpcionForm("4° medio", "4° Medio"),
-        OpcionForm("Egresado", "Egresado Enseñanza Media"),
+        OpcionForm(ACTIVIDAD_EGRESADO, "Egresado Enseñanza Media"),
         OpcionForm(ACTIVIDAD_OTRA, "Otra")
     )
 

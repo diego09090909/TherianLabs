@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -62,6 +63,7 @@ import cl.therionlabs.myapplication.viewmodels.RegistroViewModel
 fun ProspectosTab(viewModel: RegistroViewModel = viewModel()) {
     val lista by viewModel.prospectos.collectAsState()
     val pendientes by viewModel.pendientes.collectAsState()
+    val rechazados = lista.count { it.estado == Estado.RECHAZADO }
     val sincronizando by viewModel.sincronizando.collectAsState()
     val hayRed = rememberHayConexion()
     val snackbar = remember { SnackbarHostState() }
@@ -134,7 +136,7 @@ fun ProspectosTab(viewModel: RegistroViewModel = viewModel()) {
                 ),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                item { EstadoConexion(sincronizando, hayRed, pendientes) }
+                item { EstadoConexion(sincronizando, hayRed, pendientes, rechazados) }
                 item {
                     Text(
                         "Registrados",
@@ -187,12 +189,19 @@ fun ProspectosTab(viewModel: RegistroViewModel = viewModel()) {
                                     color = DuocGris,
                                     fontSize = 12.sp
                                 )
+                                if (p.estado == Estado.RECHAZADO && p.motivoRechazo.isNotBlank()) {
+                                    Text(
+                                        p.motivoRechazo,
+                                        color = DuocErrorTexto,
+                                        fontSize = 12.sp
+                                    )
+                                }
                             }
 
-                            if (p.estado == Estado.SINCRONIZADO) {
-                                DuocPill("Sincronizado", DuocVerdeSuave, DuocVerde)
-                            } else {
-                                DuocPill("Pendiente", DuocAmarilloPill, DuocAmarilloTexto)
+                            when (p.estado) {
+                                Estado.SINCRONIZADO -> DuocPill("Sincronizado", DuocVerdeSuave, DuocVerde)
+                                Estado.RECHAZADO -> DuocPill("Rechazado", DuocErrorFondo, DuocErrorTexto)
+                                else -> DuocPill("Pendiente", DuocAmarilloPill, DuocAmarilloTexto)
                             }
                         }
                     }
@@ -229,7 +238,7 @@ private fun TarjetaCifra(
 }
 
 @Composable
-private fun EstadoConexion(sincronizando: Boolean, hayRed: Boolean, pendientes: Int) {
+private fun EstadoConexion(sincronizando: Boolean, hayRed: Boolean, pendientes: Int, rechazados: Int) {
     val fondo: Color
     val colorIcono: Color
     val icono: ImageVector
@@ -249,6 +258,15 @@ private fun EstadoConexion(sincronizando: Boolean, hayRed: Boolean, pendientes: 
             fondo = DuocAzulSuave; colorIcono = DuocNavy; icono = Icons.Default.Wifi
             titulo = "Conexión detectada"
             detalle = "$pendientes por enviar. Si no suben solos, toca Sincronizar."
+        }
+        rechazados > 0 -> {
+            fondo = DuocErrorFondo; colorIcono = DuocErrorTexto; icono = Icons.Default.Warning
+            titulo = if (rechazados == 1) "Hay un registro rechazado" else "Hay registros rechazados"
+            detalle = if (rechazados == 1) {
+                "1 no fue aceptado por el servidor. El motivo aparece en el registro."
+            } else {
+                "$rechazados no fueron aceptados por el servidor. El motivo aparece en cada registro."
+            }
         }
         else -> {
             fondo = DuocVerdeSuave; colorIcono = DuocVerde; icono = Icons.Default.CloudDone

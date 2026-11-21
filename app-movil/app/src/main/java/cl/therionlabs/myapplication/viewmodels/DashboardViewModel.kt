@@ -25,7 +25,8 @@ data class EventoResumen(
     val colegio: String,
     val ultimaFecha: Long,
     val total: Int,
-    val pendientes: Int
+    val pendientes: Int,
+    val rechazados: Int = 0
 )
 
 data class RegistroReciente(
@@ -124,7 +125,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                     colegio = ps.first().colegio,
                     ultimaFecha = ps.maxOf { it.fechaCaptura },
                     total = ps.size,
-                    pendientes = ps.count { it.estado == Estado.PENDIENTE }
+                    pendientes = ps.count { it.estado == Estado.PENDIENTE },
+                    rechazados = ps.count { it.estado == Estado.RECHAZADO }
                 )
             }
             .sortedByDescending { it.ultimaFecha }

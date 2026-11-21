@@ -1,5 +1,6 @@
 package cl.therionlabs.myapplication.data
 
+import okhttp3.OkHttpClient
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -7,32 +8,48 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
+import java.util.concurrent.TimeUnit
 
-// 1. DTO de Transferencia de Datos
 data class ProspectoDto(
     val eventoId: String,
-    val nombreCompleto: String,
+    val captadorId: String,
     val rut: String,
-    val correo: String,
-    val telefono: String,
-    val colegio: String,
-    val nivelEducativo: String,
-    val carrera: String,
-    val modalidad: String,
-    val observaciones: String,
-    val fechaCaptura: Long,
-    // Campos del cupón de admisión (el backend debe agregarlos para guardarlos)
-    val carrera2: String,
-    val carrera3: String,
+    val nombres: String,
+    val apellidos: String,
     val sexo: String,
-    val fechaNacimiento: String,   // dd-MM-aaaa
+    val fechaNacimiento: String,
     val comunaResidencia: String,
-    val comunaColegio: String,
+    val celular: String,
+    val email: String,
+    val actividad: String,
+    val actividadOtra: String,
+    val establecimiento: String,
+    val comunaEstablecimiento: String,
     val jornada: String,
-    val sedes: List<String>,
+    val sedes: String,
     val nivelInteres: String,
     val afirmacion: String,
-    val autorizaDatos: Boolean
+    val carrera1: String,
+    val carrera2: String,
+    val carrera3: String,
+    val autorizaContacto: Boolean,
+    val fechaCaptura: Long
+)
+
+data class ResultadoProspectoDto(
+    val eventoId: String?,
+    val rut: String?,
+    val estado: String,
+    val motivo: String?,
+    val id: Long?
+)
+
+data class RespuestaLoteDto(
+    val recibidos: Int,
+    val creados: Int,
+    val duplicados: Int,
+    val invalidos: Int,
+    val resultados: List<ResultadoProspectoDto>
 )
 
 data class EventoDto(
@@ -43,24 +60,36 @@ data class EventoDto(
     val estado: String
 )
 
-// 2. Interfaz con los endpoints de Retrofit
 interface ApiService {
     @POST("api/prospectos/lote")
-    suspend fun enviarLote(@Body lote: List<ProspectoDto>): Response<Unit>
+    suspend fun enviarLote(@Body lote: List<ProspectoDto>): Response<RespuestaLoteDto>
+}
 
+interface EventosApi {
     @GET("api/eventos/{id}")
     suspend fun obtenerEvento(@Path("id") id: String): Response<EventoDto>
 }
 
-// 3. Cliente Retrofit Singleton
-const val BASE_URL = "http://10.0.2.2:8080/"
+const val PROSPECTOS_URL = "http://10.0.2.2:8082/"
+const val EVENTOS_URL = "http://10.0.2.2:8081/"
 
 object RetrofitClient {
-    val api: ApiService by lazy {
+
+    private val cliente: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build()
+    }
+
+    private fun construir(url: String): Retrofit =
         Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(url)
+            .client(cliente)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-            .create(ApiService::class.java)
-    }
+
+    val api: ApiService by lazy { construir(PROSPECTOS_URL).create(ApiService::class.java) }
+
+    val eventos: EventosApi by lazy { construir(EVENTOS_URL).create(EventosApi::class.java) }
 }
