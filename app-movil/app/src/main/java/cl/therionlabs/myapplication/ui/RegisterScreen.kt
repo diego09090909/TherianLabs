@@ -288,15 +288,25 @@ fun RegisterScreen(
                                 error = e.actividadOtra
                             )
                         }
+                        val etiquetaColegio = when (estado.actividad) {
+                            Catalogos.ACTIVIDAD_EGRESADO -> "Colegio donde egresaste"
+                            Catalogos.ACTIVIDAD_OTRA -> "Establecimiento (opcional)"
+                            else -> "Establecimiento"
+                        }
+                        val etiquetaComuna = when (estado.actividad) {
+                            Catalogos.ACTIVIDAD_EGRESADO -> "Comuna del colegio donde egresaste"
+                            Catalogos.ACTIVIDAD_OTRA -> "Comuna del establecimiento (opcional)"
+                            else -> "Comuna de tu establecimiento"
+                        }
                         DuocField(
-                            etiqueta = "Establecimiento",
+                            etiqueta = etiquetaColegio,
                             valor = estado.colegio,
                             onCambio = viewModel::onColegioChange,
                             placeholder = "Nombre del establecimiento",
                             error = e.colegio
                         )
                         DuocBuscador(
-                            etiqueta = "Comuna de tu establecimiento",
+                            etiqueta = etiquetaComuna,
                             seleccionado = estado.comunaColegio,
                             opciones = Comunas.opciones,
                             onSeleccion = viewModel::onComunaColegioChange,

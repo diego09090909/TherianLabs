@@ -5,6 +5,7 @@ import android.database.sqlite.SQLiteConstraintException
 import cl.therionlabs.myapplication.sync.SyncScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import com.google.gson.JsonParseException
 import java.io.IOException
 
 class ProspectoRepository(
@@ -28,45 +29,30 @@ class ProspectoRepository(
         }
     }
 
-    suspend fun sincronizarPendientes(): Boolean {
-        val pendientes = dao.obtenerPendientes()
+    suspend fun sincronizarPendientes(reintentarRechazados: Boolean = false): Boolean {
+        val pendientes = if (reintentarRechazados) dao.obtenerPendientesYRechazados() else dao.obtenerPendientes()
         if (pendientes.isEmpty()) return true
 
         for (lote in pendientes.chunked(100)) {
             val dtos = lote.map {
-                ProspectoDto(
-                    eventoId = it.eventoId,
-                    nombreCompleto = it.nombreCompleto,
-                    rut = it.rut,
+                LoteMapper.aDto(
+                    prospecto = it,
                     correo = CryptoManager.descifrar(it.correoCifrado),
-                    telefono = CryptoManager.descifrar(it.telefonoCifrado),
-                    colegio = it.colegio,
-                    nivelEducativo = it.nivelEducativo,
-                    carrera = it.carrera,
-                    modalidad = it.modalidad,
-                    observaciones = it.observaciones,
-                    fechaCaptura = it.fechaCaptura,
-                    carrera2 = it.carrera2,
-                    carrera3 = it.carrera3,
-                    sexo = it.sexo,
-                    fechaNacimiento = it.fechaNacimiento,
-                    comunaResidencia = it.comunaResidencia,
-                    comunaColegio = it.comunaColegio,
-                    jornada = it.jornada,
-                    sedes = it.sedes.split("|").filter { s -> s.isNotBlank() },
-                    nivelInteres = it.nivelInteres,
-                    afirmacion = it.afirmacion,
-                    autorizaDatos = it.autorizaDatos
+                    telefono = CryptoManager.descifrar(it.telefonoCifrado)
                 )
             }
             try {
                 val respuesta = api.enviarLote(dtos)
-                if (respuesta.isSuccessful) {
-                    dao.marcarSincronizados(lote.map { it.id })
-                } else {
-                    return false
+                val cuerpo = respuesta.body()
+                if (!respuesta.isSuccessful || cuerpo == null) return false
+                val resultado = LoteMapper.interpretar(lote, cuerpo) ?: return false
+                if (resultado.sincronizados.isNotEmpty()) {
+                    dao.marcarSincronizados(resultado.sincronizados)
                 }
+                resultado.rechazados.forEach { (id, motivo) -> dao.marcarRechazado(id, motivo) }
             } catch (e: IOException) {
+                return false
+            } catch (e: JsonParseException) {
                 return false
             }
         }

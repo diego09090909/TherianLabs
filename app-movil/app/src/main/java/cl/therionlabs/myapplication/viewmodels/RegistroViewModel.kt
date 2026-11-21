@@ -7,7 +7,9 @@ import cl.therionlabs.myapplication.CapturaApp
 import cl.therionlabs.myapplication.data.AppDatabase
 import cl.therionlabs.myapplication.data.CarreraEntity
 import cl.therionlabs.myapplication.data.CryptoManager
+import cl.therionlabs.myapplication.data.Estado
 import cl.therionlabs.myapplication.data.Prospecto
+import com.google.firebase.auth.FirebaseAuth
 import cl.therionlabs.myapplication.model.Catalogos
 import cl.therionlabs.myapplication.model.RegistroErrores
 import cl.therionlabs.myapplication.model.ResumenProspecto
@@ -69,20 +71,23 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
     fun sincronizarAhora() {
         if (_sincronizando.value) return
         viewModelScope.launch {
-            if (pendientes.value == 0) {
+            val rechazados = prospectos.value.count { it.estado == Estado.RECHAZADO }
+            if (pendientes.value == 0 && rechazados == 0) {
                 _mensajes.emit("No hay registros pendientes por sincronizar.")
                 return@launch
             }
             _sincronizando.value = true
             // Sin red o con el servidor caído devuelve false y los datos quedan PENDIENTE
             val completo = try {
-                repo.sincronizarPendientes()
+                repo.sincronizarPendientes(reintentarRechazados = true)
             } catch (e: Exception) {
                 false
             }
             _sincronizando.value = false
             _mensajes.emit(
-                if (completo) {
+                if (completo && rechazados > 0) {
+                    "Sincronización terminada. Revisa si quedan registros rechazados."
+                } else if (completo) {
                     "Datos sincronizados con el servidor."
                 } else {
                     "No se pudo sincronizar. Los datos siguen guardados en el teléfono y se reintentará solo."
@@ -248,7 +253,9 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
             actividadOtra = if (a.actividad == Catalogos.ACTIVIDAD_OTRA && a.actividadOtra.isBlank()) {
                 "Indica cuál es su actividad"
             } else null,
-            colegio = if (a.colegio.isBlank()) "El establecimiento es obligatorio" else null,
+            colegio = if (a.colegio.isBlank() && a.actividad != Catalogos.ACTIVIDAD_OTRA) {
+                "El establecimiento es obligatorio"
+            } else null,
             jornada = if (a.jornada.isBlank()) "Selecciona una jornada" else null,
             sedes = if (a.sedes.isEmpty()) "Marca al menos una sede de interés" else null,
             carrera1 = if (a.carrera1.isBlank()) "Elige tu 1ª opción de carrera" else null,
@@ -326,7 +333,10 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
                     .joinToString("|"),
                 nivelInteres = f.nivelInteres,
                 afirmacion = f.afirmacion,
-                autorizaDatos = f.aceptaTerminos
+                autorizaDatos = f.aceptaTerminos,
+                nombres = f.nombre.trim(),
+                apellidos = f.apellidos.trim(),
+                captadorId = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
             )
             if (repo.guardar(prospecto)) {
                 // Limpia el formulario pero mantiene evento y colegio para el siguiente prospecto

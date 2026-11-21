@@ -20,6 +20,12 @@ interface ProspectoDao {
     @Query("SELECT * FROM prospectos WHERE estado = 'PENDIENTE'")
     suspend fun obtenerPendientes(): List<Prospecto>
 
-    @Query("UPDATE prospectos SET estado = 'SINCRONIZADO' WHERE id IN (:ids)")
+    @Query("SELECT * FROM prospectos WHERE estado IN ('PENDIENTE', 'RECHAZADO')")
+    suspend fun obtenerPendientesYRechazados(): List<Prospecto>
+
+    @Query("UPDATE prospectos SET estado = 'SINCRONIZADO', motivoRechazo = '' WHERE id IN (:ids)")
     suspend fun marcarSincronizados(ids: List<Int>)
+
+    @Query("UPDATE prospectos SET estado = 'RECHAZADO', motivoRechazo = :motivo WHERE id = :id")
+    suspend fun marcarRechazado(id: Int, motivo: String)
 }

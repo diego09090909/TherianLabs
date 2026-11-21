@@ -103,10 +103,10 @@ fun ListScreen(mainViewModel: MainViewModel, viewModel: RegistroViewModel = view
                                     fontSize = 13.sp
                                 )
                             }
-                            if (p.estado == Estado.SINCRONIZADO) {
-                                DuocPill("Sincronizado", DuocVerdeSuave, DuocVerde)
-                            } else {
-                                DuocPill("Pendiente", DuocAmarilloPill, DuocAmarilloTexto)
+                            when (p.estado) {
+                                Estado.SINCRONIZADO -> DuocPill("Sincronizado", DuocVerdeSuave, DuocVerde)
+                                Estado.RECHAZADO -> DuocPill("Rechazado", DuocErrorFondo, DuocErrorTexto)
+                                else -> DuocPill("Pendiente", DuocAmarilloPill, DuocAmarilloTexto)
                             }
                         }
                     }

@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
         Prospecto::class,
         CarreraEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -26,6 +26,14 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun carreraDao(): CarreraDao
 
     companion object {
+
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                listOf("nombres", "apellidos", "captadorId", "motivoRechazo").forEach { columna ->
+                    db.execSQL("ALTER TABLE `prospectos` ADD COLUMN `$columna` TEXT NOT NULL DEFAULT ''")
+                }
+            }
+        }
 
         @Volatile
         private var INSTANCE: AppDatabase? = null
@@ -122,7 +130,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "captadores_db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .addCallback(object : RoomDatabase.Callback() {
                         override fun onOpen(db: SupportSQLiteDatabase) {
                             super.onOpen(db)

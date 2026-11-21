@@ -135,7 +135,7 @@ fun GuardadoScreen(mainViewModel: MainViewModel) {
                         Text("Evento", color = DuocGris, fontSize = 14.sp)
                         Spacer(Modifier.width(16.dp))
                         Text(
-                            text = "${r.eventoId} · ${r.liceo}",
+                            text = listOf(r.eventoId, r.liceo).filter { it.isNotBlank() }.joinToString(" · "),
                             color = DuocNavy,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold

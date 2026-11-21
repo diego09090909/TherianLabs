@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
 object Estado {
     const val PENDIENTE = "PENDIENTE"
     const val SINCRONIZADO = "SINCRONIZADO"
+    const val RECHAZADO = "RECHAZADO"
 }
 
 // Tabla local. correo y telefono se guardan CIFRADOS (RF-04).
@@ -39,5 +40,9 @@ data class Prospecto(
     val sedes: String = "",              // sedes separadas por "|"
     val nivelInteres: String = "",       // Alto / Medio / Bajo
     val afirmacion: String = "",         // "1" a "4"
-    val autorizaDatos: Boolean = false   // "Sí, autorizo" (Consentimiento Informado)
+    val autorizaDatos: Boolean = false,  // "Sí, autorizo" (Consentimiento Informado)
+    val nombres: String = "",
+    val apellidos: String = "",
+    val captadorId: String = "",
+    val motivoRechazo: String = ""
 )
