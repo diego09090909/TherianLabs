@@ -1,12 +1,15 @@
 package cl.therionlabs.prospectos.service;
 
 import cl.therionlabs.prospectos.DatosPrueba;
+import cl.therionlabs.prospectos.client.EventoCliente;
+import cl.therionlabs.prospectos.client.EventoInfo;
 import cl.therionlabs.prospectos.dto.EstadoResultado;
 import cl.therionlabs.prospectos.dto.ProspectoRequest;
 import cl.therionlabs.prospectos.dto.ProspectoResponse;
 import cl.therionlabs.prospectos.dto.RespuestaLote;
 import cl.therionlabs.prospectos.exception.ConflictoException;
 import cl.therionlabs.prospectos.exception.RecursoNoEncontradoException;
+import cl.therionlabs.prospectos.exception.ServicioNoDisponibleException;
 import cl.therionlabs.prospectos.exception.SolicitudInvalidaException;
 import cl.therionlabs.prospectos.mapper.ProspectoMapper;
 import cl.therionlabs.prospectos.model.Prospecto;
@@ -31,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -40,17 +44,25 @@ class ProspectoServiceTest {
     @Mock
     private ProspectoRepository repository;
 
+    @Mock
+    private EventoCliente eventoCliente;
+
     private ProspectoService service;
 
     @BeforeEach
     void preparar() {
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
-        service = new ProspectoService(repository, new ProspectoMapper(), validator);
+        service = new ProspectoService(repository, new ProspectoMapper(), validator, eventoCliente);
+    }
+
+    private void eventoAbierto(String id) {
+        when(eventoCliente.buscar(id)).thenReturn(Optional.of(new EventoInfo(id, "ABIERTO")));
     }
 
     @Test
     void crearGuardaYNormalizaElRut() {
         ProspectoRequest request = DatosPrueba.request("EVT-0042", "12.345.678-5");
+        eventoAbierto("EVT-0042");
         when(repository.existsByEventoIdAndRut("EVT-0042", "12345678-5")).thenReturn(false);
         when(repository.save(any(Prospecto.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -63,9 +75,41 @@ class ProspectoServiceTest {
     @Test
     void crearRechazaDuplicadoEnElMismoEvento() {
         ProspectoRequest request = DatosPrueba.request("EVT-0042", "12345678-5");
+        eventoAbierto("EVT-0042");
         when(repository.existsByEventoIdAndRut("EVT-0042", "12345678-5")).thenReturn(true);
 
         assertThrows(ConflictoException.class, () -> service.crear(request));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void crearRechazaEventoInexistente() {
+        ProspectoRequest request = DatosPrueba.request("EVT-0042", "12345678-5");
+        when(eventoCliente.buscar("EVT-0042")).thenReturn(Optional.empty());
+
+        SolicitudInvalidaException e = assertThrows(SolicitudInvalidaException.class, () -> service.crear(request));
+
+        assertTrue(e.getMessage().contains("no existe"));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void crearRechazaEventoCerrado() {
+        ProspectoRequest request = DatosPrueba.request("EVT-0042", "12345678-5");
+        when(eventoCliente.buscar("EVT-0042")).thenReturn(Optional.of(new EventoInfo("EVT-0042", "CERRADO")));
+
+        SolicitudInvalidaException e = assertThrows(SolicitudInvalidaException.class, () -> service.crear(request));
+
+        assertTrue(e.getMessage().contains("cerrado"));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void crearPropagaSiMsEventosNoResponde() {
+        ProspectoRequest request = DatosPrueba.request("EVT-0042", "12345678-5");
+        when(eventoCliente.buscar("EVT-0042")).thenThrow(new ServicioNoDisponibleException("caido"));
+
+        assertThrows(ServicioNoDisponibleException.class, () -> service.crear(request));
         verify(repository, never()).save(any());
     }
 
@@ -134,6 +178,7 @@ class ProspectoServiceTest {
         ProspectoRequest nuevo = DatosPrueba.request("EVT-1", "12345678-5");
         ProspectoRequest repetido = DatosPrueba.request("EVT-1", "11111111-1");
         ProspectoRequest malo = DatosPrueba.request("EVT-1", "12345678-9");
+        eventoAbierto("EVT-1");
         when(repository.existsByEventoIdAndRut("EVT-1", "12345678-5")).thenReturn(false);
         when(repository.existsByEventoIdAndRut("EVT-1", "11111111-1")).thenReturn(true);
         when(repository.save(any(Prospecto.class))).thenAnswer(inv -> {
@@ -154,6 +199,31 @@ class ProspectoServiceTest {
         assertEquals(EstadoResultado.INVALIDO, respuesta.resultados().get(2).estado());
         assertTrue(respuesta.resultados().get(2).motivo().contains("rut"));
         assertNull(respuesta.resultados().get(3).rut());
+        verify(eventoCliente, times(1)).buscar("EVT-1");
+    }
+
+    @Test
+    void loteMarcaInvalidoSiElEventoNoExisteOEstaCerrado() {
+        ProspectoRequest sinEvento = DatosPrueba.request("EVT-X", "12345678-5");
+        ProspectoRequest cerrado = DatosPrueba.request("EVT-C", "11111111-1");
+        when(eventoCliente.buscar("EVT-X")).thenReturn(Optional.empty());
+        when(eventoCliente.buscar("EVT-C")).thenReturn(Optional.of(new EventoInfo("EVT-C", "CERRADO")));
+
+        RespuestaLote respuesta = service.procesarLote(List.of(sinEvento, cerrado));
+
+        assertEquals(2, respuesta.invalidos());
+        assertTrue(respuesta.resultados().get(0).motivo().contains("no existe"));
+        assertTrue(respuesta.resultados().get(1).motivo().contains("cerrado"));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void lotePropagaSiMsEventosNoResponde() {
+        ProspectoRequest request = DatosPrueba.request("EVT-1", "12345678-5");
+        when(eventoCliente.buscar("EVT-1")).thenThrow(new ServicioNoDisponibleException("caido"));
+
+        assertThrows(ServicioNoDisponibleException.class, () -> service.procesarLote(List.of(request)));
+        verify(repository, never()).save(any());
     }
 
     @Test
@@ -175,6 +245,7 @@ class ProspectoServiceTest {
     @Test
     void loteMarcaDuplicadoSiLaBaseRechazaElGuardado() {
         ProspectoRequest request = DatosPrueba.request("EVT-1", "12345678-5");
+        eventoAbierto("EVT-1");
         when(repository.existsByEventoIdAndRut("EVT-1", "12345678-5")).thenReturn(false);
         when(repository.save(any(Prospecto.class))).thenThrow(new DataIntegrityViolationException("duplicado"));
 

@@ -24,6 +24,7 @@ El reporte de cobertura (JaCoCo) queda en `target/site/jacoco/index.html`.
 
 ## Reglas
 
+- Antes de guardar, se consulta `GET /api/eventos/{id}` en `ms-eventos` (`eventos.url`, por defecto `http://localhost:8081`). Si el evento no existe o está `CERRADO`, el prospecto es inválido; si `ms-eventos` no responde, se devuelve 503 para que la app reintente.
 - El RUT se valida con módulo 11 y se guarda como `12345678-5`.
 - Un mismo RUT no puede repetirse dentro de un evento.
 - `eventoId` y `captadorId` son texto (ej. `EVT-0042`).

@@ -1,5 +1,7 @@
 package cl.therionlabs.prospectos.service;
 
+import cl.therionlabs.prospectos.client.EventoCliente;
+import cl.therionlabs.prospectos.client.EventoInfo;
 import cl.therionlabs.prospectos.dto.EstadoResultado;
 import cl.therionlabs.prospectos.dto.ProspectoRequest;
 import cl.therionlabs.prospectos.dto.ProspectoResponse;
@@ -17,7 +19,10 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -30,11 +35,14 @@ public class ProspectoService {
     private final ProspectoRepository repository;
     private final ProspectoMapper mapper;
     private final Validator validator;
+    private final EventoCliente eventoCliente;
 
-    public ProspectoService(ProspectoRepository repository, ProspectoMapper mapper, Validator validator) {
+    public ProspectoService(ProspectoRepository repository, ProspectoMapper mapper, Validator validator,
+                            EventoCliente eventoCliente) {
         this.repository = repository;
         this.mapper = mapper;
         this.validator = validator;
+        this.eventoCliente = eventoCliente;
     }
 
     public List<ProspectoResponse> listar(String eventoId) {
@@ -50,6 +58,10 @@ public class ProspectoService {
 
     public ProspectoResponse crear(ProspectoRequest request) {
         Prospecto prospecto = mapper.aEntidad(request);
+        String problemaEvento = revisarEvento(prospecto.getEventoId(), new HashMap<>());
+        if (problemaEvento != null) {
+            throw new SolicitudInvalidaException(problemaEvento);
+        }
         if (repository.existsByEventoIdAndRut(prospecto.getEventoId(), prospecto.getRut())) {
             throw new ConflictoException(MSG_DUPLICADO);
         }
@@ -64,8 +76,9 @@ public class ProspectoService {
             throw new SolicitudInvalidaException("El lote no puede superar " + MAX_LOTE + " prospectos");
         }
         List<ResultadoProspecto> resultados = new ArrayList<>();
+        Map<String, String> eventosRevisados = new HashMap<>();
         for (ProspectoRequest request : lote) {
-            resultados.add(procesarUno(request));
+            resultados.add(procesarUno(request, eventosRevisados));
         }
         return new RespuestaLote(
                 resultados.size(),
@@ -92,7 +105,7 @@ public class ProspectoService {
                 .orElseThrow(() -> new RecursoNoEncontradoException("Prospecto no encontrado"));
     }
 
-    private ResultadoProspecto procesarUno(ProspectoRequest request) {
+    private ResultadoProspecto procesarUno(ProspectoRequest request, Map<String, String> eventosRevisados) {
         if (request == null) {
             return new ResultadoProspecto(null, null, EstadoResultado.INVALIDO, "Prospecto vacio", null);
         }
@@ -101,6 +114,10 @@ public class ProspectoService {
             return new ResultadoProspecto(request.eventoId(), request.rut(), EstadoResultado.INVALIDO, error, null);
         }
         Prospecto prospecto = mapper.aEntidad(request);
+        String problemaEvento = revisarEvento(prospecto.getEventoId(), eventosRevisados);
+        if (problemaEvento != null) {
+            return new ResultadoProspecto(prospecto.getEventoId(), prospecto.getRut(), EstadoResultado.INVALIDO, problemaEvento, null);
+        }
         if (repository.existsByEventoIdAndRut(prospecto.getEventoId(), prospecto.getRut())) {
             return duplicado(prospecto);
         }
@@ -114,6 +131,21 @@ public class ProspectoService {
 
     private ResultadoProspecto duplicado(Prospecto prospecto) {
         return new ResultadoProspecto(prospecto.getEventoId(), prospecto.getRut(), EstadoResultado.DUPLICADO, MSG_DUPLICADO, null);
+    }
+
+    private String revisarEvento(String eventoId, Map<String, String> eventosRevisados) {
+        if (eventosRevisados.containsKey(eventoId)) {
+            return eventosRevisados.get(eventoId);
+        }
+        Optional<EventoInfo> evento = eventoCliente.buscar(eventoId);
+        String problema = null;
+        if (evento.isEmpty()) {
+            problema = "El evento " + eventoId + " no existe";
+        } else if ("CERRADO".equalsIgnoreCase(evento.get().estado())) {
+            problema = "El evento " + eventoId + " esta cerrado";
+        }
+        eventosRevisados.put(eventoId, problema);
+        return problema;
     }
 
     private String revisar(ProspectoRequest request) {

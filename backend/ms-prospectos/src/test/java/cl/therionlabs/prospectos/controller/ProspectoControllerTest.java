@@ -7,6 +7,7 @@ import cl.therionlabs.prospectos.dto.RespuestaLote;
 import cl.therionlabs.prospectos.dto.ResultadoProspecto;
 import cl.therionlabs.prospectos.exception.ConflictoException;
 import cl.therionlabs.prospectos.exception.RecursoNoEncontradoException;
+import cl.therionlabs.prospectos.exception.ServicioNoDisponibleException;
 import cl.therionlabs.prospectos.exception.SolicitudInvalidaException;
 import cl.therionlabs.prospectos.service.ProspectoService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -152,6 +153,17 @@ class ProspectoControllerTest {
                 .andExpect(jsonPath("$.creados").value(1))
                 .andExpect(jsonPath("$.resultados[0].estado").value("CREADO"))
                 .andExpect(jsonPath("$.resultados[0].id").value(7));
+    }
+
+    @Test
+    void loteConMsEventosCaidoResponde503() throws Exception {
+        when(service.procesarLote(any())).thenThrow(new ServicioNoDisponibleException("ms-eventos no responde"));
+
+        mockMvc.perform(post("/api/prospectos/lote")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(List.of(DatosPrueba.request("EVT-1", "12345678-5")))))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.status").value(503));
     }
 
     @Test
