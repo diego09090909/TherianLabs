@@ -33,7 +33,7 @@ class JwtServiceTest {
         assertEquals("ana@duocuc.cl", jwtService.extraerCorreo(token));
         assertEquals("Ana", jwtService.extraerClaim(token, c -> c.get("nombre", String.class)));
         assertEquals("12345678-5", jwtService.extraerClaim(token, c -> c.get("rut", String.class)));
-        assertEquals(5, jwtService.extraerClaim(token, c -> c.get("id", Integer.class)));
+        assertEquals(5L, jwtService.extraerClaim(token, c -> c.get("id", Number.class)).longValue());
     }
 
     @Test
