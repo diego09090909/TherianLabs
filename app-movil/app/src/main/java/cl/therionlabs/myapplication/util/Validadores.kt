@@ -1,9 +1,11 @@
 package cl.therionlabs.myapplication.util
 
-import android.util.Patterns
 import java.util.Calendar
 
 object Validadores {
+
+    private val REGEX_CORREO =
+        Regex("^[A-Za-z0-9+._%-]{1,256}@[A-Za-z0-9][A-Za-z0-9-]{0,64}(\\.[A-Za-z0-9][A-Za-z0-9-]{0,25})+$")
 
     // Quita puntos y guion: "12.345.678-5" -> "123456785"
     private fun limpiarRut(rut: String): String =
@@ -53,7 +55,7 @@ object Validadores {
     }
 
     fun correoValido(correo: String): Boolean =
-        Patterns.EMAIL_ADDRESS.matcher(correo.trim()).matches()
+        REGEX_CORREO.matches(correo.trim())
 
     // Celular chileno: 9XXXXXXXX, con o sin +56
     fun telefonoValido(tel: String): Boolean =
