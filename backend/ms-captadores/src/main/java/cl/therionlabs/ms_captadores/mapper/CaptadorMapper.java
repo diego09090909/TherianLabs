@@ -1,5 +1,6 @@
 package cl.therionlabs.ms_captadores.mapper;
 
+import cl.therionlabs.ms_captadores.dto.ActualizarCaptadorRequest;
 import cl.therionlabs.ms_captadores.dto.CaptadorResponse;
 import cl.therionlabs.ms_captadores.dto.RegistroCaptadorRequest;
 import cl.therionlabs.ms_captadores.model.Captador;
@@ -16,6 +17,11 @@ public class CaptadorMapper {
         captador.setTelefono(request.getTelefono().trim());
         captador.setContrasena(request.getContrasena());
         return captador;
+    }
+
+    public void actualizar(Captador captador, ActualizarCaptadorRequest request) {
+        captador.setNombre(request.getNombre().trim());
+        captador.setTelefono(request.getTelefono().trim());
     }
 
     public CaptadorResponse toResponse(Captador captador) {

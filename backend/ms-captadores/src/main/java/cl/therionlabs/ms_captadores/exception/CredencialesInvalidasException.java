@@ -1,0 +1,8 @@
+package cl.therionlabs.ms_captadores.exception;
+
+public class CredencialesInvalidasException extends RuntimeException {
+
+    public CredencialesInvalidasException(String mensaje) {
+        super(mensaje);
+    }
+}
