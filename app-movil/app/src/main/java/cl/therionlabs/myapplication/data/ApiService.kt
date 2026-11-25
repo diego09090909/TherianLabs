@@ -72,6 +72,16 @@ interface EventosApi {
 
 const val PROSPECTOS_URL = "http://10.0.2.2:8082/"
 const val EVENTOS_URL = "http://10.0.2.2:8081/"
+const val INDICADORES_URL = "https://mindicador.cl/"
+
+// API externa pública (mindicador.cl): indicadores económicos de Chile, sin API key.
+data class IndicadorDto(val valor: Double?, val fecha: String?)
+data class IndicadoresDto(val uf: IndicadorDto?, val dolar: IndicadorDto?)
+
+interface IndicadoresApi {
+    @GET("api")
+    suspend fun obtenerIndicadores(): Response<IndicadoresDto>
+}
 
 object RetrofitClient {
 
@@ -92,4 +102,6 @@ object RetrofitClient {
     val api: ApiService by lazy { construir(PROSPECTOS_URL).create(ApiService::class.java) }
 
     val eventos: EventosApi by lazy { construir(EVENTOS_URL).create(EventosApi::class.java) }
+
+    val indicadores: IndicadoresApi by lazy { construir(INDICADORES_URL).create(IndicadoresApi::class.java) }
 }

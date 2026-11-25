@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -43,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import cl.therionlabs.myapplication.data.RetrofitClient
 import cl.therionlabs.myapplication.viewmodels.DashboardUiState
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -119,6 +121,8 @@ fun InicioTab(estado: DashboardUiState, nombre: String, onVerProspectos: () -> U
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            TarjetaIndicadores(hayRed)
+
             TarjetaGuia(abierta = guiaAbierta, onToggle = { guiaAbierta = !guiaAbierta })
 
             Row(
@@ -297,6 +301,34 @@ private fun PasoGuia(numero: Int, titulo: String, detalle: String) {
         Column {
             Text(titulo, color = DuocNavy, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Text(detalle, color = DuocGris, fontSize = 12.sp)
+        }
+    }
+}
+/** Consume la API externa mindicador.cl con Retrofit y muestra UF y dólar. */
+@Composable
+private fun TarjetaIndicadores(hayRed: Boolean) {
+    val texto by produceState("Consultando indicadores…", hayRed) {
+        value = if (!hayRed) "Sin conexión: indicadores no disponibles" else try {
+            val r = RetrofitClient.indicadores.obtenerIndicadores()
+            val ind = r.body()
+            if (r.isSuccessful && ind != null) {
+                val uf = ind.uf?.valor?.let { "UF $" + String.format(Locale.forLanguageTag("es-CL"), "%,.2f", it) }
+                val usd = ind.dolar?.valor?.let { "Dólar $" + String.format(Locale.forLanguageTag("es-CL"), "%,.2f", it) }
+                listOfNotNull(uf, usd).joinToString("  ·  ").ifEmpty { "Indicadores no disponibles" }
+            } else "Indicadores no disponibles"
+        } catch (e: Exception) {
+            "Indicadores no disponibles"
+        }
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth().tarjeta(18.dp).padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Icon(Icons.Default.Info, contentDescription = null, tint = DuocAzulAcento, modifier = Modifier.size(20.dp))
+        Column {
+            Text("Indicadores del día", color = DuocNavy, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+            Text(texto, color = DuocGris, fontSize = 13.sp)
         }
     }
 }
