@@ -39,6 +39,11 @@ object LoteMapper {
         )
     }
 
+    fun mismoRut(a: String?, b: String?): Boolean {
+        fun limpio(r: String?) = r.orEmpty().filter { it.isLetterOrDigit() }.uppercase()
+        return limpio(a).isNotEmpty() && limpio(a) == limpio(b)
+    }
+
     fun nombresYApellidos(prospecto: Prospecto): Pair<String, String> {
         if (prospecto.nombres.isNotBlank() && prospecto.apellidos.isNotBlank()) {
             return prospecto.nombres to prospecto.apellidos

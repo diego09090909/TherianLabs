@@ -133,6 +133,19 @@ En Windows con MySQL sin clave (`root` vacío), agrega al final de cada comando:
 
 La app guarda todo primero en el teléfono (Room) y envía los prospectos por lotes a ms-prospectos cuando hay red (WorkManager). Si el evento fue cerrado, el servidor rechaza el registro y la app lo marca como *Rechazado*.
 
+### Endpoints que consume la app
+
+| Operación | Endpoint | Dónde se usa en la app |
+|---|---|---|
+| Crear (lote) | `POST ms-prospectos /api/prospectos/lote` | Sincronización automática y botón Sincronizar |
+| Leer | `GET ms-prospectos /api/prospectos?eventoId=` | Busca el id remoto antes de editar o eliminar |
+| Actualizar | `PUT ms-prospectos /api/prospectos/{id}` | Pestaña Prospectos → ícono de lápiz (correo, celular, nivel de interés) |
+| Eliminar | `DELETE ms-prospectos /api/prospectos/{id}` | Pestaña Prospectos → ícono de papelera |
+| Leer evento | `GET ms-eventos /api/eventos/{id}` | Validar el código del evento |
+| API externa | `GET https://mindicador.cl/api` | Tarjeta "Indicadores del día" en Inicio (UF y dólar) |
+
+Si el prospecto aún no se sincronizó, editar o eliminar solo cambia el teléfono (Room). Si ya está en el servidor, la app necesita conexión y primero llama al microservicio.
+
 ---
 
 ## 🧪 Pruebas y cobertura
