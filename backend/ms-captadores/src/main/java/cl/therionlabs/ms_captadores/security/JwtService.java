@@ -5,6 +5,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,11 +23,16 @@ public class JwtService {
     @Value("${jwt.expiration}")
     private long jwtExpiration;
 
+    @Value("${jwt.admin-correos:}")
+    private String adminCorreos;
+
     public String generarToken(Captador captador) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("id", captador.getId());
         claims.put("nombre", captador.getNombre());
         claims.put("rut", captador.getRut());
+        claims.put("rol", esAdmin(captador.getCorreo()) ? "ADMIN" : "CAPTADOR");
+        claims.put("tipo", "access");
 
         return Jwts.builder()
                 .claims(claims)
@@ -35,6 +41,15 @@ public class JwtService {
                 .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
                 .signWith(obtenerLlaveFirma())
                 .compact();
+    }
+
+    private boolean esAdmin(String correo) {
+        if (adminCorreos == null || adminCorreos.isBlank() || correo == null) {
+            return false;
+        }
+        return Arrays.stream(adminCorreos.split(","))
+                .map(String::trim)
+                .anyMatch(c -> c.equalsIgnoreCase(correo));
     }
 
     public String extraerCorreo(String token) {

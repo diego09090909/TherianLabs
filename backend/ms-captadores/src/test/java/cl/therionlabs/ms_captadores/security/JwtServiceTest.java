@@ -37,6 +37,32 @@ class JwtServiceTest {
     }
 
     @Test
+    void tokenLlevaRolCaptadorYTipoAccessPorDefecto() {
+        String token = jwtService.generarToken(captador);
+
+        assertEquals("CAPTADOR", jwtService.extraerClaim(token, c -> c.get("rol", String.class)));
+        assertEquals("access", jwtService.extraerClaim(token, c -> c.get("tipo", String.class)));
+    }
+
+    @Test
+    void correoDeLaListaDeAdminsRecibeRolAdmin() {
+        ReflectionTestUtils.setField(jwtService, "adminCorreos", "otro@duocuc.cl, ANA@duocuc.cl");
+
+        String token = jwtService.generarToken(captador);
+
+        assertEquals("ADMIN", jwtService.extraerClaim(token, c -> c.get("rol", String.class)));
+    }
+
+    @Test
+    void correoFueraDeLaListaDeAdminsSigueSiendoCaptador() {
+        ReflectionTestUtils.setField(jwtService, "adminCorreos", "otro@duocuc.cl");
+
+        String token = jwtService.generarToken(captador);
+
+        assertEquals("CAPTADOR", jwtService.extraerClaim(token, c -> c.get("rol", String.class)));
+    }
+
+    @Test
     void tokenEsValidoSoloParaSuCorreo() {
         String token = jwtService.generarToken(captador);
 
