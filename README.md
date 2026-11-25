@@ -89,32 +89,68 @@ Las dos carpetas son independientes: `app-movil/` se abre con Android Studio y c
 
 ## 🛠️ Microservicios
 
-| Servicio | Puerto | Responsable | Estado |
-|---|---|---|---|
-| [`ms-eventos`](backend/ms-eventos) | 8081 | José | En desarrollo |
-| [`ms-prospectos`](backend/ms-prospectos) | 8082 | Kevin | CRUD base listo |
-| [`ms-captadores`](backend/ms-captadores) | 8083 | Diego | En desarrollo |
+| Servicio | Puerto | Responsable | Qué hace | Tests |
+|---|---|---|---|---|
+| [`ms-eventos`](backend/ms-eventos) | 8081 | José | Eventos (CRUD, abrir y cerrar). Escritura protegida con JWT (rol `ADMIN`) | 35 |
+| [`ms-prospectos`](backend/ms-prospectos) | 8082 | Kevin | Prospectos: CRUD, validación de RUT, carga por lote (hasta 500) y validación del evento contra ms-eventos | 52 |
+| [`ms-captadores`](backend/ms-captadores) | 8083 | Diego | Registro y login de captadores con JWT | 68 |
 
-Cada uno es un proyecto Maven propio (Java 17, Spring Boot 3.4) con arquitectura en capas: `controller`, `service`, `repository` y `model`.
+Cada uno es un proyecto Maven propio con arquitectura en capas (`controller`, `service`, `repository`, `model`, más `dto`, `mapper` y `exception`), su propia base MySQL y su README con las rutas.
 
 ---
 
 ## ▶️ Cómo ejecutar
 
-### App Android
-1. Abrir la carpeta **`app-movil/`** con **Android Studio**.
-2. Sincronizar Gradle y ejecutar en un emulador o dispositivo (minSdk 24).
-3. En el emulador, los microservicios locales se alcanzan en `http://10.0.2.2:<puerto>/`.
+Requisitos: **Java 17 o superior**, **Maven**, **MySQL** encendido y **Android Studio**.
 
-### Microservicios
-Requisitos: **Java 17**, **Maven** y **MySQL** encendido.
+### 1. Microservicios
+
+Cada servicio en su propia terminal. Las bases se crean solas. Si tu MySQL tiene otra clave, pásala con `DB_PASSWORD`.
 
 ```bash
+# ms-eventos (8081): necesita backend/ms-eventos/secrets.properties con la clave JWT
+cd backend/ms-eventos
+echo "app.jwt.secret=<clave base64 de 32 bytes o más>" > secrets.properties
+./mvnw spring-boot:run
+
+# ms-prospectos (8082)
 cd backend/ms-prospectos
 mvn spring-boot:run
+
+# ms-captadores (8083)
+cd backend/ms-captadores
+./mvnw spring-boot:run
 ```
 
-Usuario y clave de MySQL por defecto: `root` / `root` (se cambian con las variables `DB_USER` y `DB_PASSWORD`).
+En Windows con MySQL sin clave (`root` vacío), agrega al final de cada comando:
+`"-Dspring-boot.run.arguments=--spring.datasource.password="`
+
+### 2. App Android
+
+1. Abrir la carpeta **`app-movil/`** con Android Studio y sincronizar Gradle.
+2. Ejecutar en un emulador (minSdk 24). Desde el emulador los servicios se alcanzan en `http://10.0.2.2:<puerto>/`.
+3. Iniciar sesión (Firebase Auth), sincronizar eventos y escanear o escribir un código como `EVT-0042`.
+
+La app guarda todo primero en el teléfono (Room) y envía los prospectos por lotes a ms-prospectos cuando hay red (WorkManager). Si el evento fue cerrado, el servidor rechaza el registro y la app lo marca como *Rechazado*.
+
+---
+
+## 🧪 Pruebas y cobertura
+
+| Módulo | Comando | Cobertura (JaCoCo) |
+|---|---|---|
+| ms-prospectos | `mvn test` | 99 % |
+| ms-eventos | `./mvnw test` | reporte en `target/site/jacoco/index.html` |
+| ms-captadores | `./mvnw test` | reporte en `target/site/jacoco/index.html` |
+| App Android | `./gradlew testDebugUnitTest jacocoTestReport` (en `app-movil/`) | 95 % instrucciones · 98 % líneas |
+
+Los tests de los servicios usan H2 en memoria, así que no necesitan MySQL. En la app la cobertura se mide sobre las clases de lógica (`util`, `model` y `LoteMapper`); las pantallas Compose, los ViewModels y Room no se incluyen porque requieren emulador. El reporte de la app queda en `app-movil/app/build/reports/jacoco/jacocoTestReport/html/index.html`.
+
+---
+
+## 📦 APK firmado
+
+El APK release firmado se genera desde Android Studio: *Build → Generate Signed App Bundle / APK → APK → release*. El keystore no está en el repositorio. El archivo resultante queda en `app-movil/app/release/app-release.apk`.
 
 ---
 
