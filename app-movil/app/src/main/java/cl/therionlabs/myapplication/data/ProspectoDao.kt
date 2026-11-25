@@ -26,6 +26,15 @@ interface ProspectoDao {
     @Query("UPDATE prospectos SET estado = 'SINCRONIZADO', motivoRechazo = '' WHERE id IN (:ids)")
     suspend fun marcarSincronizados(ids: List<Int>)
 
+    @Query(
+        "UPDATE prospectos SET correoCifrado = :correo, telefonoCifrado = :telefono, " +
+            "nivelInteres = :nivel, estado = :estado, motivoRechazo = '' WHERE id = :id"
+    )
+    suspend fun actualizarContacto(id: Int, correo: String, telefono: String, nivel: String, estado: String)
+
+    @Query("DELETE FROM prospectos WHERE id = :id")
+    suspend fun eliminar(id: Int)
+
     @Query("UPDATE prospectos SET estado = 'RECHAZADO', motivoRechazo = :motivo WHERE id = :id")
     suspend fun marcarRechazado(id: Int, motivo: String)
 }

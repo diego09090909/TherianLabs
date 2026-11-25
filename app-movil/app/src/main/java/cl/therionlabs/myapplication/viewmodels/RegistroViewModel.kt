@@ -9,6 +9,7 @@ import cl.therionlabs.myapplication.data.CarreraEntity
 import cl.therionlabs.myapplication.data.CryptoManager
 import cl.therionlabs.myapplication.data.Estado
 import cl.therionlabs.myapplication.data.Prospecto
+import cl.therionlabs.myapplication.data.ResultadoRemoto
 import com.google.firebase.auth.FirebaseAuth
 import cl.therionlabs.myapplication.model.Catalogos
 import cl.therionlabs.myapplication.model.RegistroErrores
@@ -91,6 +92,48 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
                     "Datos sincronizados con el servidor."
                 } else {
                     "No se pudo sincronizar. Los datos siguen guardados en el teléfono y se reintentará solo."
+                }
+            )
+        }
+    }
+
+    // Correo y celular descifrados, para precargar el formulario de edicion.
+    fun contactoDe(p: Prospecto): Pair<String, String> =
+        runCatching {
+            CryptoManager.descifrar(p.correoCifrado) to CryptoManager.descifrar(p.telefonoCifrado)
+        }.getOrDefault("" to "")
+
+    // UPDATE de un prospecto: PUT al microservicio si ya estaba sincronizado, y luego Room.
+    fun editarProspecto(p: Prospecto, correo: String, telefono: String, nivelInteres: String) {
+        viewModelScope.launch {
+            val resultado = try {
+                repo.actualizarContacto(p, correo.trim(), telefono.replace(" ", ""), nivelInteres)
+            } catch (e: Exception) {
+                ResultadoRemoto.ERROR_SERVIDOR
+            }
+            _mensajes.emit(
+                when (resultado) {
+                    ResultadoRemoto.OK -> "Prospecto actualizado."
+                    ResultadoRemoto.SIN_CONEXION -> "Sin conexión: no se pudo actualizar en el servidor. Intenta con internet."
+                    ResultadoRemoto.ERROR_SERVIDOR -> "El servidor no pudo actualizar el prospecto."
+                }
+            )
+        }
+    }
+
+    // DELETE de un prospecto: DELETE al microservicio si ya estaba sincronizado, y luego Room.
+    fun eliminarProspecto(p: Prospecto) {
+        viewModelScope.launch {
+            val resultado = try {
+                repo.eliminar(p)
+            } catch (e: Exception) {
+                ResultadoRemoto.ERROR_SERVIDOR
+            }
+            _mensajes.emit(
+                when (resultado) {
+                    ResultadoRemoto.OK -> "Prospecto eliminado."
+                    ResultadoRemoto.SIN_CONEXION -> "Sin conexión: no se pudo eliminar en el servidor. Intenta con internet."
+                    ResultadoRemoto.ERROR_SERVIDOR -> "El servidor no pudo eliminar el prospecto."
                 }
             )
         }

@@ -5,9 +5,12 @@ import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
+import retrofit2.http.Query
 import java.util.concurrent.TimeUnit
 
 data class ProspectoDto(
@@ -52,6 +55,11 @@ data class RespuestaLoteDto(
     val resultados: List<ResultadoProspectoDto>
 )
 
+data class ProspectoRemotoDto(
+    val id: Long,
+    val rut: String?
+)
+
 data class EventoDto(
     val id: String,
     val nombre: String,
@@ -63,6 +71,15 @@ data class EventoDto(
 interface ApiService {
     @POST("api/prospectos/lote")
     suspend fun enviarLote(@Body lote: List<ProspectoDto>): Response<RespuestaLoteDto>
+
+    @GET("api/prospectos")
+    suspend fun listarPorEvento(@Query("eventoId") eventoId: String): Response<List<ProspectoRemotoDto>>
+
+    @PUT("api/prospectos/{id}")
+    suspend fun actualizar(@Path("id") id: Long, @Body prospecto: ProspectoDto): Response<ProspectoRemotoDto>
+
+    @DELETE("api/prospectos/{id}")
+    suspend fun eliminar(@Path("id") id: Long): Response<Unit>
 }
 
 interface EventosApi {
