@@ -5,7 +5,7 @@
 #   bash instalar.sh
 set -e
 
-# 1) Docker, Git y Docker Compose
+# 1) Docker, Git, Docker Compose y Buildx
 sudo dnf install -y docker git
 sudo systemctl enable --now docker
 sudo usermod -aG docker ec2-user
@@ -13,6 +13,10 @@ sudo mkdir -p /usr/local/lib/docker/cli-plugins
 sudo curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-$(uname -m)" \
   -o /usr/local/lib/docker/cli-plugins/docker-compose
 sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+# Compose necesita buildx >= 0.17 para compilar las imágenes
+sudo curl -fsSL "https://github.com/docker/buildx/releases/download/v0.19.3/buildx-v0.19.3.linux-amd64" \
+  -o /usr/local/lib/docker/cli-plugins/docker-buildx
+sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
 
 # 2) 2 GB de swap: 3 microservicios + MySQL no caben en 1 GB de RAM
 if [ ! -f /swapfile ]; then
