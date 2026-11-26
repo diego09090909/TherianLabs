@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import cl.therionlabs.ms_captadores.dto.ActualizarCaptadorRequest;
 import cl.therionlabs.ms_captadores.dto.AuthResponse;
+import cl.therionlabs.ms_captadores.dto.CambiarContrasenaRequest;
 import cl.therionlabs.ms_captadores.dto.CaptadorResponse;
 import cl.therionlabs.ms_captadores.dto.LoginCaptadorRequest;
 import cl.therionlabs.ms_captadores.dto.RegistroCaptadorRequest;
@@ -177,5 +178,24 @@ class CaptadorServiceTest {
         assertThrows(AccesoDenegadoException.class, () -> service.eliminar(1L, otro));
         assertThrows(RecursoNoEncontradoException.class, () -> service.eliminar(2L, otro));
         verify(repository, never()).delete(any());
+    }
+
+    @Test
+    void cambiarContrasenaConActualCorrectaLaReemplaza() {
+        when(repository.findById(1L)).thenReturn(Optional.of(ana));
+
+        service.cambiarContrasena(1L, new CambiarContrasenaRequest("clave123", "nueva456"), ana);
+
+        verify(repository).save(ana);
+        assertEquals(true, encoder.matches("nueva456", ana.getContrasena()));
+    }
+
+    @Test
+    void cambiarContrasenaConActualIncorrectaFalla() {
+        when(repository.findById(1L)).thenReturn(Optional.of(ana));
+
+        assertThrows(CredencialesInvalidasException.class,
+                () -> service.cambiarContrasena(1L, new CambiarContrasenaRequest("otra", "nueva456"), ana));
+        verify(repository, never()).save(any());
     }
 }

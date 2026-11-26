@@ -1,77 +1,84 @@
 package cl.therionlabs.myapplication.data
 
-import com.google.firebase.auth.EmailAuthProvider
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.auth.UserProfileChangeRequest
-import kotlinx.coroutines.tasks.await
+import com.google.gson.Gson
+import retrofit2.Response
+import java.io.IOException
 
-class AuthRepository {
+// Error que viene del servidor: código HTTP + mensaje del microservicio
+class ApiException(val codigo: Int, mensaje: String, val detalles: List<String> = emptyList()) :
+    Exception(mensaje)
 
-    private val firebaseAuth: FirebaseAuth = FirebaseAuth.getInstance()
+// Sin conexión o el servidor no responde
+class SinConexionException : Exception("Sin conexión con el servidor")
 
-    val usuarioActual: FirebaseUser?
-        get() = firebaseAuth.currentUser
+class AuthRepository(
+    private val api: CaptadoresApi = RetrofitClient.captadores
+) {
 
-    // Ahora acepta el nombre para guardarlo en el perfil de Firebase al crear la cuenta
+    val usuarioActual: SesionCaptador?
+        get() = SesionManager.actual()
+
     suspend fun registrarCaptador(
+        nombre: String,
+        rut: String,
         correo: String,
-        clave: String,
-        nombre: String? = null
-    ): Result<FirebaseUser?> {
-        return try {
-            val resultado = firebaseAuth.createUserWithEmailAndPassword(correo, clave).await()
-            val usuario = resultado.user
-            if (usuario != null && !nombre.isNullOrBlank()) {
-                usuario.updateProfile(
-                    UserProfileChangeRequest.Builder().setDisplayName(nombre.trim()).build()
-                ).await()
-            }
-            Result.success(usuario)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
+        telefono: String,
+        clave: String
+    ): Result<CaptadorDto> = llamar {
+        api.registrar(RegistroCaptadorDto(nombre, rut, correo, telefono, clave))
+    }.map { it.captador }
 
-    suspend fun iniciarSesion(correo: String, clave: String): Result<FirebaseUser?> {
-        return try {
-            val resultado = firebaseAuth.signInWithEmailAndPassword(correo, clave).await()
-            Result.success(resultado.user)
-        } catch (e: Exception) {
-            Result.failure(e)
+    suspend fun iniciarSesion(correo: String, clave: String): Result<SesionCaptador> =
+        llamar { api.login(LoginCaptadorDto(correo, clave)) }.map { auth ->
+            val c = auth.captador
+            val sesion = SesionCaptador(c.id, c.nombre, c.rut, c.correo, c.telefono, auth.token)
+            SesionManager.guardar(sesion)
+            sesion
         }
-    }
 
     suspend fun actualizarNombre(nombre: String): Result<Unit> {
-        return try {
-            val usuario = firebaseAuth.currentUser
-                ?: return Result.failure(IllegalStateException("Sin sesión"))
-            usuario.updateProfile(
-                UserProfileChangeRequest.Builder().setDisplayName(nombre).build()
-            ).await()
-            usuario.reload().await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        val sesion = usuarioActual ?: return Result.failure(IllegalStateException("Sin sesión"))
+        return llamar { api.actualizar(sesion.id, ActualizarCaptadorDto(nombre, sesion.telefono)) }
+            .map { c -> SesionManager.guardar(sesion.copy(nombre = c.nombre, telefono = c.telefono)) }
     }
 
-    // Firebase exige confirmar la clave actual antes de cambiarla (reautenticación)
     suspend fun cambiarClave(claveActual: String, claveNueva: String): Result<Unit> {
-        return try {
-            val usuario = firebaseAuth.currentUser
-                ?: return Result.failure(IllegalStateException("Sin sesión"))
-            val correo = usuario.email
-                ?: return Result.failure(IllegalStateException("Sin correo"))
-            usuario.reauthenticate(EmailAuthProvider.getCredential(correo, claveActual)).await()
-            usuario.updatePassword(claveNueva).await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        val sesion = usuarioActual ?: return Result.failure(IllegalStateException("Sin sesión"))
+        return llamarSinCuerpo { api.cambiarContrasena(sesion.id, CambiarContrasenaDto(claveActual, claveNueva)) }
     }
 
     fun cerrarSesion() {
-        firebaseAuth.signOut()
+        SesionManager.cerrar()
+    }
+
+    // ----- Manejo común de respuestas -----
+    private suspend fun <T> llamar(peticion: suspend () -> Response<T>): Result<T> =
+        try {
+            val r = peticion()
+            val cuerpo = r.body()
+            if (r.isSuccessful && cuerpo != null) Result.success(cuerpo) else Result.failure(aError(r))
+        } catch (e: IOException) {
+            Result.failure(SinConexionException())
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+
+    private suspend fun llamarSinCuerpo(peticion: suspend () -> Response<Unit>): Result<Unit> =
+        try {
+            val r = peticion()
+            if (r.isSuccessful) Result.success(Unit) else Result.failure(aError(r))
+        } catch (e: IOException) {
+            Result.failure(SinConexionException())
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+
+    private fun aError(r: Response<*>): ApiException {
+        val error = try {
+            Gson().fromJson(r.errorBody()?.string(), ErrorRespuestaDto::class.java)
+        } catch (e: Exception) {
+            null
+        }
+        return ApiException(r.code(), error?.mensaje ?: "Error ${r.code()}", error?.detalles.orEmpty())
     }
 }

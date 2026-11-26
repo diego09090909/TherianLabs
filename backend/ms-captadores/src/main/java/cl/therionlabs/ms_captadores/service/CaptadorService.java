@@ -2,6 +2,7 @@ package cl.therionlabs.ms_captadores.service;
 
 import cl.therionlabs.ms_captadores.dto.ActualizarCaptadorRequest;
 import cl.therionlabs.ms_captadores.dto.AuthResponse;
+import cl.therionlabs.ms_captadores.dto.CambiarContrasenaRequest;
 import cl.therionlabs.ms_captadores.dto.CaptadorResponse;
 import cl.therionlabs.ms_captadores.dto.LoginCaptadorRequest;
 import cl.therionlabs.ms_captadores.dto.RegistroCaptadorRequest;
@@ -75,6 +76,16 @@ public class CaptadorService {
         Captador captador = buscar(id);
         mapper.actualizar(captador, request);
         return mapper.toResponse(repository.save(captador));
+    }
+
+    public void cambiarContrasena(Long id, CambiarContrasenaRequest request, Captador solicitante) {
+        verificarPropietario(id, solicitante);
+        Captador captador = buscar(id);
+        if (!passwordEncoder.matches(request.getContrasenaActual(), captador.getContrasena())) {
+            throw new CredencialesInvalidasException("La contraseña actual no es correcta");
+        }
+        captador.setContrasena(passwordEncoder.encode(request.getContrasenaNueva()));
+        repository.save(captador);
     }
 
     public void eliminar(Long id, Captador solicitante) {

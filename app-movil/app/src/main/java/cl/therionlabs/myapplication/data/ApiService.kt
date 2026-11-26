@@ -1,5 +1,6 @@
 package cl.therionlabs.myapplication.data
 
+import cl.therionlabs.myapplication.BuildConfig
 import okhttp3.OkHttpClient
 import retrofit2.Response
 import retrofit2.Retrofit
@@ -87,8 +88,11 @@ interface EventosApi {
     suspend fun obtenerEvento(@Path("id") id: String): Response<EventoDto>
 }
 
-const val PROSPECTOS_URL = "http://10.0.2.2:8082/"
-const val EVENTOS_URL = "http://10.0.2.2:8081/"
+// El servidor se define en app/build.gradle.kts (API_HOST):
+// emulador = 10.0.2.2, AWS = IP pública o dominio del servidor
+const val PROSPECTOS_URL = "http://${BuildConfig.API_HOST}:8082/"
+const val EVENTOS_URL = "http://${BuildConfig.API_HOST}:8081/"
+const val CAPTADORES_URL = "http://${BuildConfig.API_HOST}:8083/"
 const val INDICADORES_URL = "https://mindicador.cl/"
 
 // API externa pública (mindicador.cl): indicadores económicos de Chile, sin API key.
@@ -109,10 +113,25 @@ object RetrofitClient {
             .build()
     }
 
-    private fun construir(url: String): Retrofit =
+    // Cliente para nuestros microservicios: agrega el token JWT del captador si hay sesión
+    private val clienteConToken: OkHttpClient by lazy {
+        cliente.newBuilder()
+            .addInterceptor { chain ->
+                val token = SesionManager.token()
+                val peticion = if (token != null) {
+                    chain.request().newBuilder().header("Authorization", "Bearer $token").build()
+                } else {
+                    chain.request()
+                }
+                chain.proceed(peticion)
+            }
+            .build()
+    }
+
+    private fun construir(url: String, http: OkHttpClient = clienteConToken): Retrofit =
         Retrofit.Builder()
             .baseUrl(url)
-            .client(cliente)
+            .client(http)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
 
@@ -120,5 +139,8 @@ object RetrofitClient {
 
     val eventos: EventosApi by lazy { construir(EVENTOS_URL).create(EventosApi::class.java) }
 
-    val indicadores: IndicadoresApi by lazy { construir(INDICADORES_URL).create(IndicadoresApi::class.java) }
+    val captadores: CaptadoresApi by lazy { construir(CAPTADORES_URL).create(CaptadoresApi::class.java) }
+
+    // API externa: sin token
+    val indicadores: IndicadoresApi by lazy { construir(INDICADORES_URL, cliente).create(IndicadoresApi::class.java) }
 }

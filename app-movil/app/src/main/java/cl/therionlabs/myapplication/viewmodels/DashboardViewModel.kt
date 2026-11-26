@@ -4,13 +4,11 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import cl.therionlabs.myapplication.CapturaApp
+import cl.therionlabs.myapplication.data.ApiException
 import cl.therionlabs.myapplication.data.AuthRepository
 import cl.therionlabs.myapplication.data.Estado
 import cl.therionlabs.myapplication.data.Prospecto
-import com.google.firebase.FirebaseNetworkException
-import com.google.firebase.FirebaseTooManyRequestsException
-import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
-import com.google.firebase.auth.FirebaseAuthWeakPasswordException
+import cl.therionlabs.myapplication.data.SinConexionException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -57,15 +55,15 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val _nombre = MutableStateFlow(calcularNombre())
     val nombre: StateFlow<String> = _nombre.asStateFlow()
 
-    val correo: String? get() = auth.usuarioActual?.email
+    val correo: String? get() = auth.usuarioActual?.correo
     val hayCuenta: Boolean get() = auth.usuarioActual != null
 
     private fun calcularNombre(): String {
         val usuario = auth.usuarioActual
-        val guardado = usuario?.displayName?.trim()
+        val guardado = usuario?.nombre?.trim()
         if (!guardado.isNullOrBlank()) return guardado
 
-        val deCorreo = usuario?.email?.substringBefore("@")
+        val deCorreo = usuario?.correo?.substringBefore("@")
             ?.replace('.', ' ')?.replace('_', ' ')?.trim()
         if (deCorreo.isNullOrBlank()) return "captador"
         return deCorreo.split(" ").joinToString(" ") { p -> p.replaceFirstChar { it.uppercase() } }
@@ -102,10 +100,13 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     private fun mensajeClave(e: Throwable): String = when (e) {
-        is FirebaseAuthInvalidCredentialsException -> "La contraseña actual no es correcta."
-        is FirebaseAuthWeakPasswordException -> "La nueva contraseña es muy débil."
-        is FirebaseTooManyRequestsException -> "Demasiados intentos. Espera unos minutos."
-        is FirebaseNetworkException -> "Sin conexión a internet. Intenta de nuevo."
+        is ApiException -> when (e.codigo) {
+            401 -> "La contraseña actual no es correcta."
+            400 -> "La nueva contraseña debe tener al menos 6 caracteres."
+            403 -> "Tu sesión expiró. Cierra sesión y vuelve a entrar."
+            else -> "No se pudo cambiar la contraseña. Intenta más tarde."
+        }
+        is SinConexionException -> "Sin conexión con el servidor. Intenta de nuevo."
         else -> "No se pudo cambiar la contraseña. Intenta más tarde."
     }
 

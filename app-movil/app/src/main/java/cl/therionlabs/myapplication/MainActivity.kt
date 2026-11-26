@@ -21,6 +21,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import cl.therionlabs.myapplication.data.SesionManager
 import cl.therionlabs.myapplication.navigation.NavigationEvent
 import cl.therionlabs.myapplication.navigation.Screen
 import cl.therionlabs.myapplication.ui.DuocTopBar
@@ -73,7 +74,8 @@ class MainActivity : ComponentActivity() {
 
                 NavHost(
                     navController = navController,
-                    startDestination = Screen.Home.route,
+                    // Si el captador ya inició sesión antes, entra directo al panel
+                    startDestination = if (SesionManager.actual() != null) "main_dashboard" else Screen.Home.route,
                     // Transiciones por defecto: la pantalla nueva entra desde la derecha
                     enterTransition = {
                         slideIntoContainer(

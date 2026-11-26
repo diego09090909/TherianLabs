@@ -6,11 +6,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.google.firebase.auth.FirebaseAuth
+import cl.therionlabs.myapplication.data.SesionManager
 
 @Composable
 fun CaptadorProfileScreen() {
-    val firebaseUser = remember { FirebaseAuth.getInstance().currentUser }
+    val sesion = remember { SesionManager.actual() }
 
     Column(
         modifier = Modifier
@@ -23,7 +23,7 @@ fun CaptadorProfileScreen() {
         Spacer(modifier = Modifier.height(24.dp))
 
         OutlinedTextField(
-            value = firebaseUser?.email ?: "",
+            value = sesion?.correo ?: "",
             onValueChange = {},
             label = { Text("Correo Electrónico") },
             readOnly = true,

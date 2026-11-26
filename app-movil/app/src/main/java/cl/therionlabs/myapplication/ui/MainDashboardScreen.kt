@@ -61,7 +61,7 @@ import cl.therionlabs.myapplication.navigation.BottomNavItem
 import cl.therionlabs.myapplication.navigation.Screen
 import cl.therionlabs.myapplication.viewmodels.DashboardViewModel
 import cl.therionlabs.myapplication.viewmodels.MainViewModel
-import com.google.firebase.auth.FirebaseAuth
+import cl.therionlabs.myapplication.data.SesionManager
 
 @Composable
 fun MainDashboardScreen(
@@ -126,7 +126,7 @@ fun MainDashboardScreen(
                             onGuardarNombre = { nuevo, cb -> dashboardViewModel.guardarNombre(nuevo, cb) },
                             onCambiarClave = { act, nue, cb -> dashboardViewModel.cambiarClave(act, nue, cb) },
                             onCerrarSesion = {
-                                FirebaseAuth.getInstance().signOut()
+                                SesionManager.cerrar()
                                 onLogout()
                             }
                         )

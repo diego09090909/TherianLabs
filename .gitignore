@@ -5,3 +5,6 @@ target/
 
 # Sistema
 .DS_Store
+
+# Variables del servidor
+backend/.env

@@ -2,7 +2,6 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     id("com.google.devtools.ksp")
-    id("com.google.gms.google-services")
 }
 
 android {
@@ -21,6 +20,11 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Servidor de los microservicios. Por defecto el PC visto desde el emulador (10.0.2.2).
+        // Para el APK que apunta a AWS: en gradle.properties poner API_HOST=<IP pública de EC2>
+        val apiHost = (project.findProperty("API_HOST") as String?) ?: "10.0.2.2"
+        buildConfigField("String", "API_HOST", "\"$apiHost\"")
     }
 
     buildTypes {
@@ -40,6 +44,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -86,8 +91,5 @@ dependencies {
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
 
-
-    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
-    implementation("com.google.firebase:firebase-auth-ktx")
 }
 apply(from = "jacoco.gradle.kts")

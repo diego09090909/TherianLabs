@@ -3,7 +3,9 @@ package cl.therionlabs.myapplication.viewmodels
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import cl.therionlabs.myapplication.data.ApiException
 import cl.therionlabs.myapplication.data.AuthRepository
+import cl.therionlabs.myapplication.data.SinConexionException
 import cl.therionlabs.myapplication.util.LoginValidator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,27 +39,21 @@ class LoginViewModel(
         _uiState.value = LoginUiState.Loading
 
         viewModelScope.launch {
-            val resultado = authRepository.iniciarSesion(correo.trim(), clave)
+            val resultado = authRepository.iniciarSesion(correo.trim().lowercase(), clave)
 
             resultado.fold(
-                onSuccess = { usuario ->
-                    if (usuario != null) {
-                        _uiState.value = LoginUiState.Success(usuario.email ?: correo.trim())
-                    } else {
-                        _uiState.value = LoginUiState.Error("No se pudo iniciar sesión. Intenta nuevamente.")
-                    }
+                onSuccess = { sesion ->
+                    _uiState.value = LoginUiState.Success(sesion.correo)
                 },
                 onFailure = { excepcion ->
-                    Log.e("LoginViewModel", "Error en Firebase Auth", excepcion)
+                    Log.e("LoginViewModel", "Error de ms-captadores", excepcion)
 
                     val mensajeParaCaptador = when {
-                        excepcion.message?.contains("invalid-credential") == true ||
-                                excepcion.message?.contains("user-not-found") == true ||
-                                excepcion.message?.contains("wrong-password") == true ->
+                        excepcion is ApiException && excepcion.codigo == 401 ->
                             "Correo o contraseña incorrectos. Verifica tus datos."
 
-                        excepcion.message?.contains("network") == true ->
-                            "Sin conexión a internet. Revisa tu red e intenta nuevamente."
+                        excepcion is SinConexionException ->
+                            "Sin conexión con el servidor. Revisa tu red e intenta nuevamente."
 
                         else ->
                             "Ocurrió un problema al iniciar sesión. Intenta más tarde."

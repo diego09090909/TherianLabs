@@ -4,6 +4,7 @@ import android.app.Application
 import cl.therionlabs.myapplication.data.AppDatabase
 import cl.therionlabs.myapplication.data.ProspectoRepository
 import cl.therionlabs.myapplication.data.RetrofitClient
+import cl.therionlabs.myapplication.data.SesionManager
 import cl.therionlabs.myapplication.sync.SyncScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +28,9 @@ class CapturaApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // La sesión del captador (token de ms-captadores) se guarda en el teléfono
+        SesionManager.iniciar(this)
 
         SyncScheduler.programarPeriodico(this)
         SyncScheduler.programarAhora(this)

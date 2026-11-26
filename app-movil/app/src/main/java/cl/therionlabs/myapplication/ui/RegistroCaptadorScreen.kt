@@ -24,12 +24,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import cl.therionlabs.myapplication.util.Validadores
 import cl.therionlabs.myapplication.viewmodels.RegisterUiState
 import cl.therionlabs.myapplication.viewmodels.RegisterUserViewModel
 
@@ -47,11 +50,13 @@ fun RegistroCaptadorScreen(
 
 
     val uiState by viewModel.uiState.collectAsState()
+    val contexto = LocalContext.current
 
 
     LaunchedEffect(uiState) {
         when (uiState) {
             is RegisterUiState.Success -> {
+                Toast.makeText(contexto, "Cuenta creada. Ya puedes iniciar sesión.", Toast.LENGTH_LONG).show()
 
                 onVolverLogin()
                 viewModel.resetearEstado()
@@ -92,7 +97,7 @@ fun RegistroCaptadorScreen(
             etiqueta = "RUT",
             valor = rut,
             onCambio = {
-                rut = it
+                rut = Validadores.formatearRutEnVivo(it)
                 if (uiState is RegisterUiState.Error) viewModel.resetearEstado()
             },
             placeholder = "12.345.678-9"
@@ -104,7 +109,7 @@ fun RegistroCaptadorScreen(
                 correo = it
                 if (uiState is RegisterUiState.Error) viewModel.resetearEstado()
             },
-            placeholder = "nombre@correo.cl",
+            placeholder = "nombre@duocuc.cl",
             teclado = KeyboardType.Email
         )
         DuocField(
@@ -138,7 +143,7 @@ fun RegistroCaptadorScreen(
             imeAction = ImeAction.Done
         )
 
-        DuocBannerInfo("Tu solicitud creará inmediatamente tu cuenta de acceso a la plataforma.")
+        DuocBannerInfo("Con tu correo Duoc y un RUT válido tu cuenta queda activa al instante.")
 
 
         if (uiState is RegisterUiState.Error) {
@@ -154,9 +159,12 @@ fun RegistroCaptadorScreen(
         DuocBotonAmarillo(
             texto = if (uiState is RegisterUiState.Loading) "Registrando..." else "Solicitar registro",
             onClick = {
-                // Llama al método del ViewModel para validar e interactuar con Firebase
+                // Valida y envía la solicitud a ms-captadores
                 viewModel.registrarCaptador(
+                    nombre = nombre,
+                    rut = rut,
                     correo = correo,
+                    telefono = telefono,
                     clave = contrasena,
                     confirmarClave = confirmarContrasena
                 )

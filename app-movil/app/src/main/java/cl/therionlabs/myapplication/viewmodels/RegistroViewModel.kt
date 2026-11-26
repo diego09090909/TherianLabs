@@ -10,7 +10,7 @@ import cl.therionlabs.myapplication.data.CryptoManager
 import cl.therionlabs.myapplication.data.Estado
 import cl.therionlabs.myapplication.data.Prospecto
 import cl.therionlabs.myapplication.data.ResultadoRemoto
-import com.google.firebase.auth.FirebaseAuth
+import cl.therionlabs.myapplication.data.SesionManager
 import cl.therionlabs.myapplication.model.Catalogos
 import cl.therionlabs.myapplication.model.RegistroErrores
 import cl.therionlabs.myapplication.model.ResumenProspecto
@@ -379,7 +379,7 @@ class RegistroViewModel(application: Application) : AndroidViewModel(application
                 autorizaDatos = f.aceptaTerminos,
                 nombres = f.nombre.trim(),
                 apellidos = f.apellidos.trim(),
-                captadorId = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+                captadorId = SesionManager.actual()?.id?.toString().orEmpty()
             )
             if (repo.guardar(prospecto)) {
                 // Limpia el formulario pero mantiene evento y colegio para el siguiente prospecto

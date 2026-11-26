@@ -2,6 +2,7 @@ package cl.therionlabs.ms_captadores.controller;
 
 import cl.therionlabs.ms_captadores.dto.ActualizarCaptadorRequest;
 import cl.therionlabs.ms_captadores.dto.AuthResponse;
+import cl.therionlabs.ms_captadores.dto.CambiarContrasenaRequest;
 import cl.therionlabs.ms_captadores.dto.CaptadorResponse;
 import cl.therionlabs.ms_captadores.dto.LoginCaptadorRequest;
 import cl.therionlabs.ms_captadores.dto.RegistroCaptadorRequest;
@@ -64,6 +65,14 @@ public class CaptadorController {
                                        @Valid @RequestBody ActualizarCaptadorRequest request,
                                        @AuthenticationPrincipal Captador captador) {
         return service.actualizar(id, request, captador);
+    }
+
+    @PutMapping("/{id}/contrasena")
+    public ResponseEntity<Void> cambiarContrasena(@PathVariable Long id,
+                                                  @Valid @RequestBody CambiarContrasenaRequest request,
+                                                  @AuthenticationPrincipal Captador captador) {
+        service.cambiarContrasena(id, request, captador);
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}")
